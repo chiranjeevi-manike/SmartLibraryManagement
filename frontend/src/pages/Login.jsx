@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 
-const API_URL = "http://127.0.0.1:8000";
+const API_URL = "https://smartlibrarymanagement-production.up.railway.app";
 
 function Login() {
   const [username, setUsername] = useState("");
@@ -86,18 +86,18 @@ function Login() {
       // ==============================================
 
       /*
-        role_id 2 = ADMIN
-        role_id 3 = LIBRARIAN
-        role_id 4 = MEMBER
+      role_id 1 = ADMIN
+      role_id 2 = LIBRARIAN
+      role_id 3 = MEMBER
       */
 
-      if (Number(user.role_id) === 2) {
+      if (Number(user.role_id) === 1) {
         navigate("/dashboard");
 
-      } else if (Number(user.role_id) === 3) {
+      } else if (Number(user.role_id) === 2) {
         navigate("/librarian-dashboard");
 
-      } else if (Number(user.role_id) === 4) {
+      } else if (Number(user.role_id) === 3) {
         navigate("/member-dashboard");
 
       } else {

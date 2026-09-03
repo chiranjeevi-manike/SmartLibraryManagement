@@ -54,7 +54,7 @@ function Notifications() {
       }
 
       const response = await axios.get(
-        "http://127.0.0.1:8000/notifications/me",
+        "https://smartlibrarymanagement-production.up.railway.app/notifications/me",
         {
           headers: getHeaders(),
         }
@@ -129,7 +129,7 @@ function Notifications() {
       setProcessingId(notification.id);
 
       await axios.put(
-        `http://127.0.0.1:8000/notifications/${notification.id}/read`,
+        `https://smartlibrarymanagement-production.up.railway.app/notifications/${notification.id}/read`,
         {},
         {
           headers: getHeaders(),
@@ -178,7 +178,7 @@ function Notifications() {
       setMarkingAll(true);
 
       await axios.put(
-        "http://127.0.0.1:8000/notifications/me/read-all",
+        "https://smartlibrarymanagement-production.up.railway.app/notifications/me/read-all",
         {},
         {
           headers: getHeaders(),

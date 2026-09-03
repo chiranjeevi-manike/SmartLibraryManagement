@@ -33,7 +33,7 @@ function MemberDashboard() {
       }
 
       const userResponse = await axios.get(
-        "http://127.0.0.1:8000/users/me",
+        "https://smartlibrarymanagement-production.up.railway.app/users/me",
         {
           headers: getHeaders(),
         }
@@ -42,7 +42,7 @@ function MemberDashboard() {
       setUser(userResponse.data);
 
       const summaryResponse = await axios.get(
-        "http://127.0.0.1:8000/issues/me/summary",
+        "https://smartlibrarymanagement-production.up.railway.app/issues/me/summary",
         {
           headers: getHeaders(),
         }

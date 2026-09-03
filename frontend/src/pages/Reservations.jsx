@@ -79,7 +79,7 @@ function Reservations() {
       }
 
       const response = await axios.get(
-        "http://127.0.0.1:8000/books/",
+        "https://smartlibrarymanagement-production.up.railway.app/books/",
         {
           headers: getHeaders(),
         }
@@ -124,14 +124,14 @@ function Reservations() {
 
       if (isMember) {
         response = await axios.get(
-          "http://127.0.0.1:8000/reservations/my",
+          "https://smartlibrarymanagement-production.up.railway.app/reservations/my",
           {
             headers: getHeaders(),
           }
         );
       } else {
         response = await axios.get(
-          "http://127.0.0.1:8000/reservations/",
+          "https://smartlibrarymanagement-production.up.railway.app/reservations/",
           {
             headers: getHeaders(),
           }
@@ -179,7 +179,7 @@ function Reservations() {
 
     try {
       const response = await axios.get(
-        "http://127.0.0.1:8000/reservations/my/queue",
+        "https://smartlibrarymanagement-production.up.railway.app/reservations/my/queue",
         {
           headers: getHeaders(),
         }
@@ -253,7 +253,7 @@ function Reservations() {
       setReserving(true);
 
       await axios.post(
-        "http://127.0.0.1:8000/reservations/",
+        "https://smartlibrarymanagement-production.up.railway.app/reservations/",
         {
           book_id: Number(selectedBookId),
         },
@@ -303,7 +303,7 @@ function Reservations() {
 
     try {
       await axios.put(
-        `http://127.0.0.1:8000/reservations/${reservation.id}/cancel`,
+        `https://smartlibrarymanagement-production.up.railway.app/reservations/${reservation.id}/cancel`,
         {},
         {
           headers: getHeaders(),
@@ -365,7 +365,7 @@ function Reservations() {
 
     try {
       await axios.put(
-        `http://127.0.0.1:8000/reservations/${reservation.id}/fulfill`,
+        `https://smartlibrarymanagement-production.up.railway.app/reservations/${reservation.id}/fulfill`,
         {},
         {
           headers: getHeaders(),

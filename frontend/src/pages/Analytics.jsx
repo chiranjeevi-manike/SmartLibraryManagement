@@ -84,12 +84,12 @@ function Analytics() {
         trendsResponse,
       ] = await Promise.all([
         axios.get(
-          "http://127.0.0.1:8000/analytics/dashboard",
+          "https://smartlibrarymanagement-production.up.railway.app/analytics/dashboard",
           { headers }
         ),
 
         axios.get(
-          "http://127.0.0.1:8000/analytics/top-borrowed-books",
+          "https://smartlibrarymanagement-production.up.railway.app/analytics/top-borrowed-books",
           {
             headers,
             params: { limit: 5 },
@@ -97,7 +97,7 @@ function Analytics() {
         ),
 
         axios.get(
-          "http://127.0.0.1:8000/analytics/top-rated-books",
+          "https://smartlibrarymanagement-production.up.railway.app/analytics/top-rated-books",
           {
             headers,
             params: { limit: 5 },
@@ -105,7 +105,7 @@ function Analytics() {
         ),
 
         axios.get(
-          "http://127.0.0.1:8000/analytics/most-active-members",
+          "https://smartlibrarymanagement-production.up.railway.app/analytics/most-active-members",
           {
             headers,
             params: { limit: 5 },
@@ -113,7 +113,7 @@ function Analytics() {
         ),
 
         axios.get(
-          "http://127.0.0.1:8000/analytics/monthly-trends",
+          "https://smartlibrarymanagement-production.up.railway.app/analytics/monthly-trends",
           {
             headers,
             params: { months: 6 },
@@ -179,7 +179,7 @@ function Analytics() {
       setTrendLoading(true);
 
       const response = await axios.get(
-        "http://127.0.0.1:8000/analytics/monthly-trends",
+        "https://smartlibrarymanagement-production.up.railway.app/analytics/monthly-trends",
         {
           headers: getHeaders(),
           params: {

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-const API_BASE_URL = "http://127.0.0.1:8000";
+const API_BASE_URL = "https://smartlibrarymanagement-production.up.railway.app";
 
 function SecurityDashboard() {
   const [data, setData] = useState({
@@ -557,3 +557,4 @@ const styles = {
 };
 
 export default SecurityDashboard;
+

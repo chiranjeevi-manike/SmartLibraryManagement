@@ -87,7 +87,7 @@ function Issues() {
       }
 
       const response = await axios.get(
-        "http://127.0.0.1:8000/books/",
+        "https://smartlibrarymanagement-production.up.railway.app/books/",
         {
           headers: getHeaders(),
         }
@@ -138,8 +138,8 @@ function Issues() {
       }
 
       const endpoint = isMember
-        ? "http://127.0.0.1:8000/issues/me/active"
-        : "http://127.0.0.1:8000/issues/active";
+        ? "https://smartlibrarymanagement-production.up.railway.app/issues/me/active"
+        : "https://smartlibrarymanagement-production.up.railway.app/issues/active";
 
       const response = await axios.get(
         endpoint,
@@ -237,7 +237,7 @@ function Issues() {
       setSelectedUserId("");
 
       const response = await axios.get(
-        "http://127.0.0.1:8000/users/search",
+        "https://smartlibrarymanagement-production.up.railway.app/users/search",
         {
           params: {
             query: searchText,
@@ -312,7 +312,7 @@ function Issues() {
       setIssuing(true);
 
       await axios.post(
-        "http://127.0.0.1:8000/issues/",
+        "https://smartlibrarymanagement-production.up.railway.app/issues/",
         {
           user_id: Number(selectedUserId),
           book_id: Number(selectedBookId),
@@ -369,7 +369,7 @@ function Issues() {
 
     try {
       await axios.put(
-        `http://127.0.0.1:8000/issues/${issue.id}/renew`,
+        `https://smartlibrarymanagement-production.up.railway.app/issues/${issue.id}/renew`,
         {},
         {
           headers: getHeaders(),
@@ -420,7 +420,7 @@ function Issues() {
 
     try {
       const response = await axios.post(
-        `http://127.0.0.1:8000/issues/${issue.id}/return`,
+        `https://smartlibrarymanagement-production.up.railway.app/issues/${issue.id}/return`,
         {},
         {
           headers: getHeaders(),

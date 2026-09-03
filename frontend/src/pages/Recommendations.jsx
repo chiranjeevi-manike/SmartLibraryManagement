@@ -61,7 +61,7 @@ function Recommendations() {
       setError("");
 
       const response = await axios.get(
-        "http://127.0.0.1:8000/books/recommendations",
+        "https://smartlibrarymanagement-production.up.railway.app/books/recommendations",
         {
           params: {
             limit: selectedLimit,

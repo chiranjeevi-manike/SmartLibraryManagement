@@ -6,7 +6,7 @@ import {
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 
-const API_URL = "http://127.0.0.1:8000";
+const API_URL = "https://smartlibrarymanagement-production.up.railway.app";
 
 const ACTIONS = [
   "BOOK_CREATED",

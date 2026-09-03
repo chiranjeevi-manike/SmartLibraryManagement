@@ -53,7 +53,7 @@ function LibrarianDashboard() {
 
         // Get logged-in user
         const userResponse = await axios.get(
-          "http://127.0.0.1:8000/users/me",
+          "https://smartlibrarymanagement-production.up.railway.app/users/me",
           {
             headers: getHeaders(),
           }
@@ -63,22 +63,20 @@ function LibrarianDashboard() {
 
         setUser(currentUser);
 
-        // Librarian role_id = 3
-        if (Number(currentUser.role_id) !== 3) {
-          if (Number(currentUser.role_id) === 2) {
-            navigate("/dashboard");
-          } else if (Number(currentUser.role_id) === 4) {
-            navigate("/member-dashboard");
-          } else {
-            handleLogout();
-          }
-
-          return;
-        }
+        // Librarian role_id = 2
+if (Number(currentUser.role_id) !== 2) {
+  if (Number(currentUser.role_id) === 1) {
+    navigate("/dashboard");
+  } else if (Number(currentUser.role_id) === 3) {
+    navigate("/member-dashboard");
+  } else {
+    navigate("/login");
+  }
+}
 
         // Get librarian dashboard
         const dashboardResponse = await axios.get(
-          "http://127.0.0.1:8000/users/librarian/dashboard",
+          "https://smartlibrarymanagement-production.up.railway.app/users/librarian/dashboard",
           {
             headers: getHeaders(),
           }

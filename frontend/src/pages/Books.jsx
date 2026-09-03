@@ -109,7 +109,7 @@ function Books() {
       }
 
       const response = await axios.get(
-        "http://127.0.0.1:8000/books/",
+        "https://smartlibrarymanagement-production.up.railway.app/books/",
         {
           headers: getHeaders(),
         }
@@ -159,7 +159,7 @@ function Books() {
       }
 
       const response = await axios.get(
-        "http://127.0.0.1:8000/authors/",
+        "https://smartlibrarymanagement-production.up.railway.app/authors/",
         {
           headers: getHeaders(),
         }
@@ -199,7 +199,7 @@ function Books() {
       }
 
       const response = await axios.get(
-        "http://127.0.0.1:8000/categories/",
+        "https://smartlibrarymanagement-production.up.railway.app/categories/",
         {
           headers: getHeaders(),
         }
@@ -312,7 +312,7 @@ function Books() {
       };
 
       await axios.post(
-        "http://127.0.0.1:8000/books/",
+        "https://smartlibrarymanagement-production.up.railway.app/books/",
         payload,
         {
           headers: getHeaders(),
@@ -397,7 +397,7 @@ function Books() {
       };
 
       await axios.put(
-        `http://127.0.0.1:8000/books/${editingBook.id}`,
+        `https://smartlibrarymanagement-production.up.railway.app/books/${editingBook.id}`,
         payload,
         {
           headers: getHeaders(),
@@ -451,7 +451,7 @@ function Books() {
 
     try {
       await axios.delete(
-        `http://127.0.0.1:8000/books/${book.id}`,
+        `https://smartlibrarymanagement-production.up.railway.app/books/${book.id}`,
         {
           headers: getHeaders(),
         }

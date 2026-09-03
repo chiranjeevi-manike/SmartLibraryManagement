@@ -97,7 +97,7 @@ function Fines() {
 
   const fetchMemberFines = async () => {
     const response = await axios.get(
-      "http://127.0.0.1:8000/issues/me/fines",
+      "https://smartlibrarymanagement-production.up.railway.app/issues/me/fines",
       {
         headers: getHeaders(),
       }
@@ -116,14 +116,14 @@ function Fines() {
       paidResponse,
     ] = await Promise.all([
       axios.get(
-        "http://127.0.0.1:8000/issues/fines/unpaid",
+        "https://smartlibrarymanagement-production.up.railway.app/issues/fines/unpaid",
         {
           headers: getHeaders(),
         }
       ),
 
       axios.get(
-        "http://127.0.0.1:8000/issues/fines/paid",
+        "https://smartlibrarymanagement-production.up.railway.app/issues/fines/paid",
         {
           headers: getHeaders(),
         }
@@ -293,7 +293,7 @@ function Fines() {
       setProcessingId(issueId);
 
       await axios.put(
-        `http://127.0.0.1:8000/issues/${issueId}/fine/pay`,
+        `https://smartlibrarymanagement-production.up.railway.app/issues/${issueId}/fine/pay`,
         {},
         {
           headers: getHeaders(),

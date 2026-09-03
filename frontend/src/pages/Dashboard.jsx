@@ -53,7 +53,7 @@ function Dashboard() {
 
         // Get logged-in admin
         const userResponse = await axios.get(
-          "http://127.0.0.1:8000/users/me",
+          "https://smartlibrarymanagement-production.up.railway.app/users/me",
           {
             headers: getHeaders(),
           }
@@ -63,22 +63,20 @@ function Dashboard() {
 
         setUser(currentUser);
 
-        // ADMIN role_id = 2
-        if (Number(currentUser.role_id) !== 2) {
-          if (Number(currentUser.role_id) === 3) {
-            navigate("/librarian-dashboard");
-          } else if (Number(currentUser.role_id) === 4) {
-            navigate("/member-dashboard");
-          } else {
-            handleLogout();
-          }
-
-          return;
-        }
+        // ADMIN role_id = 1
+if (Number(currentUser.role_id) !== 1) {
+  if (Number(currentUser.role_id) === 2) {
+    navigate("/librarian-dashboard");
+  } else if (Number(currentUser.role_id) === 3) {
+    navigate("/member-dashboard");
+  } else {
+    navigate("/login");
+  }
+}
 
         // Admin analytics dashboard
         const response = await axios.get(
-          "http://127.0.0.1:8000/analytics/dashboard",
+          "https://smartlibrarymanagement-production.up.railway.app/analytics/dashboard",
           {
             headers: getHeaders(),
           }

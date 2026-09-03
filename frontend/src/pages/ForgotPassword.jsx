@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 
-const API_URL = "http://127.0.0.1:8000";
+const API_URL = "https://smartlibrarymanagement-production.up.railway.app";
 
 function ForgotPassword() {
   const navigate = useNavigate();

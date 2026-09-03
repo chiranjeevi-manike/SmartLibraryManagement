@@ -148,7 +148,7 @@ function Reports() {
       }
 
       const response = await axios.get(
-        `http://127.0.0.1:8000${selected.endpoint}`,
+        `https://smartlibrarymanagement-production.up.railway.app${selected.endpoint}`,
         {
           headers: getHeaders(),
           params,
@@ -232,7 +232,7 @@ function Reports() {
       );
 
       const response = await axios.get(
-        `http://127.0.0.1:8000${selected.endpoint}`,
+        `https://smartlibrarymanagement-production.up.railway.app${selected.endpoint}`,
         {
           headers: getHeaders(),
         }
@@ -289,7 +289,7 @@ function Reports() {
       }
 
       const response = await axios.get(
-        `http://127.0.0.1:8000/reports/export/${reportType}/${format}`,
+        `https://smartlibrarymanagement-production.up.railway.app/reports/export/${reportType}/${format}`,
         {
           headers: getHeaders(),
           params,

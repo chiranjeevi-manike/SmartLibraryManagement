@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-const API_BASE_URL = "http://127.0.0.1:8000";
+const API_BASE_URL = "https://smartlibrarymanagement-production.up.railway.app";
 
 function CirculationMonitoring() {
   const navigate = useNavigate();
@@ -891,3 +891,4 @@ const smallMuted = {
 };
 
 export default CirculationMonitoring;
+
