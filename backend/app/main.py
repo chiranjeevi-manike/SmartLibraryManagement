@@ -87,6 +87,7 @@ app.add_middleware(
  	"http://localhost:4174",
         "http://127.0.0.1:4173",
 	"http://127.0.0.1:4174",
+	"https://reasonable-growth-production-a6c1.up.railway.app",
     ],
     allow_credentials=True,
     allow_methods=["*"],
