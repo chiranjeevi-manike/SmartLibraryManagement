@@ -15,3 +15,23 @@ node_modules/
 
 # Logs
 *.log
+
+# Environment / Secrets
+.env
+.env.*
+!.env.example
+
+# Frontend production output
+dist/
+
+# Python
+__pycache__/
+*.py[cod]
+
+# IDE
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
