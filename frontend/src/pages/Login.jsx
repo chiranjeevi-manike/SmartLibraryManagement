@@ -86,19 +86,19 @@ function Login() {
       // ==============================================
 
       /*
-      role_id 1 = ADMIN
-      role_id 2 = LIBRARIAN
-      role_id 3 = MEMBER
-      */
+  role_id 2 = ADMIN
+  role_id 3 = LIBRARIAN
+  role_id 4 = MEMBER
+*/
 
-      if (Number(user.role_id) === 1) {
-        navigate("/dashboard");
+      if (Number(user.role_id) === 2) {
+  navigate("/dashboard");
 
-      } else if (Number(user.role_id) === 2) {
-        navigate("/librarian-dashboard");
+} else if (Number(user.role_id) === 3) {
+  navigate("/librarian-dashboard");
 
-      } else if (Number(user.role_id) === 3) {
-        navigate("/member-dashboard");
+} else if (Number(user.role_id) === 4) {
+  navigate("/member-dashboard");
 
       } else {
         localStorage.removeItem("token");

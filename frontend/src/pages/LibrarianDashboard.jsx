@@ -63,11 +63,11 @@ function LibrarianDashboard() {
 
         setUser(currentUser);
 
-        // Librarian role_id = 2
-if (Number(currentUser.role_id) !== 2) {
-  if (Number(currentUser.role_id) === 1) {
+        // Librarian role_id = 3
+if (Number(currentUser.role_id) !== 3) {
+  if (Number(currentUser.role_id) === 2) {
     navigate("/dashboard");
-  } else if (Number(currentUser.role_id) === 3) {
+  } else if (Number(currentUser.role_id) === 4) {
     navigate("/member-dashboard");
   } else {
     navigate("/login");
