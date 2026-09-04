@@ -1,5 +1,6 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, Boolean
+# from sqlalchemy import Column, Integer, String, ForeignKey, Boolean
 from sqlalchemy.orm import relationship
+from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, UniqueConstraint, Index
 
 from app.database import Base
 
@@ -7,14 +8,15 @@ from app.database import Base
 class Book(Base):
     __tablename__ = "books"
 
+    __table_args__ = (
+    UniqueConstraint("isbn", name="books_isbn_key"),
+    Index("ix_books_isbn", "isbn", unique=True),
+)
+
     id = Column(Integer, primary_key=True, index=True)
 
-    isbn = Column(
-        String(20),
-        unique=True,
-        nullable=False,
-        index=True
-    )
+    isbn = Column(String, nullable=False)
+    
 
     title = Column(
         String(200),
