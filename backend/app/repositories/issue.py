@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 from app.models.issue import Issue
 from app.models.book import Book
 from app.models.user import User
+from app.models.book_copy import BookCopy
 
 def create_issue(
     db: Session,
@@ -143,6 +144,19 @@ def create_issue(
     if not book:
         raise ValueError("Book not found")
 
+    available_copy = (
+        db.query(BookCopy)
+        .filter(
+            BookCopy.book_id == book_id,
+            BookCopy.status == "AVAILABLE"
+        )
+        .order_by(BookCopy.id.asc())
+        .first()
+    )
+
+    if not available_copy:
+        raise ValueError("No physical copy is available for this book")
+
 
     # --------------------------------------------------
     # 8. Check availability
@@ -191,6 +205,7 @@ def create_issue(
     new_issue = Issue(
         user_id=user_id,
         book_id=book_id,
+        book_copy_id=available_copy.id,
         issue_date=issue_date,
         due_date=due_date,
         status="ISSUED"
@@ -200,7 +215,7 @@ def create_issue(
     # --------------------------------------------------
     # 11. Reduce available copies
     # --------------------------------------------------
-
+    available_copy.status = "ISSUED"
     book.available_copies -= 1
 
 
@@ -252,66 +267,64 @@ def return_book(
     ).first()
 
     if not issue:
-        raise ValueError(
-            "Issue record not found"
-        )
+        raise ValueError("Issue record not found")
 
     if issue.status == "RETURNED":
-        raise ValueError(
-            "This book has already been returned"
-        )
+        raise ValueError("This book has already been returned")
 
     book = db.query(Book).filter(
         Book.id == issue.book_id
     ).first()
 
     if not book:
-        raise ValueError(
-            "Book record not found"
+        raise ValueError("Book record not found")
+
+    # Get the exact physical copy linked to this issue.
+    # Older historical issues may have no book_copy_id.
+    physical_copy = None
+
+    if issue.book_copy_id is not None:
+        physical_copy = (
+            db.query(BookCopy)
+            .filter(BookCopy.id == issue.book_copy_id)
+            .first()
         )
+
+        if not physical_copy:
+            raise ValueError(
+                "Physical copy linked to this issue was not found"
+            )
+
+        if physical_copy.book_id != issue.book_id:
+            raise ValueError(
+                "Physical copy does not belong to the issued book"
+            )
 
     return_date = datetime.utcnow()
 
-    # -----------------------------
-    # Calculate overdue days
-    # -----------------------------
-
     if return_date > issue.due_date:
-
         overdue_days = (
             return_date.date() -
             issue.due_date.date()
         ).days
-
     else:
         overdue_days = 0
 
-    # -----------------------------
-    # Fine calculation
-    # -----------------------------
-
     FINE_PER_DAY = 5
-
     fine_amount = overdue_days * FINE_PER_DAY
-
-    # -----------------------------
-    # Update issue
-    # -----------------------------
 
     issue.return_date = return_date
     issue.overdue_days = overdue_days
     issue.fine_amount = fine_amount
     issue.status = "RETURNED"
 
-    # Return copy to library
+    if physical_copy is not None:
+        physical_copy.status = "AVAILABLE"
+
+    # Keep issue.book_copy_id for permanent issue history.
     book.available_copies += 1
 
-    # --------------------------------------------------
-    # Keep return operation inside current transaction
-    # Router will commit return + notifications +
-    # reservation changes + audit log together
-    # --------------------------------------------------
-
+    # Router commits return + notifications + reservation changes + audit log.
     db.flush()
 
     return issue

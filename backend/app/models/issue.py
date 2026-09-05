@@ -80,5 +80,13 @@ class Issue(Base):
         default=0,
         nullable=False
     )
+
+    book_copy_id = Column(
+    Integer,
+    ForeignKey("book_copies.id"),
+    nullable=True,
+    index=True,
+    )
     user = relationship("User")
     book = relationship("Book")
+    book_copy = relationship("BookCopy")

@@ -56,6 +56,8 @@ from app.routers import ratings
 from app.routers import analytics
 
 from fastapi.middleware.cors import CORSMiddleware
+
+from app.routers import book_copies
 # --------------------------------------------------
 # Create database tables
 # --------------------------------------------------
@@ -206,3 +208,4 @@ app.include_router(reports.router)
 app.include_router(audit_logs.router)
 app.include_router(ratings.router)
 app.include_router(analytics.router)
+app.include_router(book_copies.router)

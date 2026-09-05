@@ -13,6 +13,13 @@ class Book(Base):
     Index("ix_books_isbn", "isbn", unique=True),
 )
 
+
+    copies = relationship(
+    "BookCopy",
+    back_populates="book",
+    cascade="all, delete-orphan",
+)
+
     id = Column(Integer, primary_key=True, index=True)
 
     isbn = Column(String, nullable=False)
