@@ -134,10 +134,8 @@ def create_issue(
 
     book = (
         db.query(Book)
-        .filter(
-            Book.id == book_id,
-            Book.is_active == True
-        )
+        .filter(Book.id == book_id)
+        .with_for_update()
         .first()
     )
 
@@ -151,6 +149,7 @@ def create_issue(
             BookCopy.status == "AVAILABLE"
         )
         .order_by(BookCopy.id.asc())
+        .with_for_update(skip_locked=True)
         .first()
     )
 
