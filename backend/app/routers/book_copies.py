@@ -6,7 +6,10 @@ from app.models.book import Book
 from app.models.book_copy import BookCopy
 from app.models.user import User
 from app.utils.dependencies import get_current_user, require_roles
+from io import BytesIO
 
+import qrcode
+from fastapi.responses import StreamingResponse
 
 router = APIRouter(
     prefix="/book-copies",
@@ -59,6 +62,54 @@ def get_copy_by_accession(
         )
 
     return copy
+
+
+
+@router.get("/{copy_id}/qr")
+def get_book_copy_qr(
+    copy_id: int,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user)
+):
+    copy = (
+        db.query(BookCopy)
+        .filter(BookCopy.id == copy_id)
+        .first()
+    )
+
+    if not copy:
+        raise HTTPException(
+            status_code=404,
+            detail="Book copy not found"
+        )
+
+    qr = qrcode.QRCode(
+        version=1,
+        box_size=10,
+        border=4
+    )
+
+    qr.add_data(copy.accession_number)
+    qr.make(fit=True)
+
+    image = qr.make_image(
+        fill_color="black",
+        back_color="white"
+    )
+
+    buffer = BytesIO()
+    image.save(buffer, format="PNG")
+    buffer.seek(0)
+
+    return StreamingResponse(
+        buffer,
+        media_type="image/png",
+        headers={
+            "Content-Disposition":
+                f'inline; filename="{copy.accession_number}.png"'
+        }
+    )
+
 
 
 @router.patch("/{copy_id}/shelf-location")
