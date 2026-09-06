@@ -11,6 +11,9 @@ from io import BytesIO
 import qrcode
 from fastapi.responses import StreamingResponse
 
+import barcode
+from barcode.writer import ImageWriter
+
 router = APIRouter(
     prefix="/book-copies",
     tags=["Book Copies"]
@@ -110,6 +113,47 @@ def get_book_copy_qr(
         }
     )
 
+
+
+@router.get("/{copy_id}/barcode")
+def get_book_copy_barcode(
+    copy_id: int,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user)
+):
+    copy = (
+        db.query(BookCopy)
+        .filter(BookCopy.id == copy_id)
+        .first()
+    )
+
+    if not copy:
+        raise HTTPException(
+            status_code=404,
+            detail="Book copy not found"
+        )
+
+    barcode_class = barcode.get_barcode_class("code128")
+
+    barcode_image = barcode_class(
+        copy.accession_number,
+        writer=ImageWriter()
+    )
+
+    buffer = BytesIO()
+
+    barcode_image.write(buffer)
+
+    buffer.seek(0)
+
+    return StreamingResponse(
+        buffer,
+        media_type="image/png",
+        headers={
+            "Content-Disposition":
+                f'inline; filename="{copy.accession_number}_barcode.png"'
+        }
+    )
 
 
 @router.patch("/{copy_id}/shelf-location")

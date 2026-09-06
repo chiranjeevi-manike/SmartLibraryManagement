@@ -31,3 +31,4 @@ openpyxl
 APScheduler
 alembic==1.19.1
 qrcode==8.2
+python-barcode==0.16.1
