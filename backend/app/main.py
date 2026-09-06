@@ -22,7 +22,10 @@ from app.services.reservation_service import (
 
 from app.services.notification_service import (
     generate_due_reminders,
-    generate_overdue_notifications
+    generate_overdue_notifications,
+    send_due_reminder_emails,
+    send_overdue_emails,
+    send_reservation_ready_emails,
 )
 
 from app.database import Base, engine
@@ -165,14 +168,24 @@ def run_notification_job():
         due_result = generate_due_reminders(db)
 
         overdue_result = generate_overdue_notifications(db)
+        email_result = send_due_reminder_emails(db)
+        overdue_email_result = send_overdue_emails(db)
+        reservation_email_result = send_reservation_ready_emails(db)
+        db.commit()
 
         print(
-            "Notification job:",
-            {
-                "due_reminders": due_result["created_count"],
-                "overdue_notifications": overdue_result["created_count"]
-            }
-        )
+    "Notification job:",
+    {
+        "due_reminders": due_result["created_count"],
+        "overdue_notifications": overdue_result["created_count"],
+        "due_emails_sent": email_result["sent_count"],
+        "due_emails_failed": email_result["failed_count"],
+        "overdue_emails_sent": overdue_email_result["sent_count"],
+        "overdue_emails_failed": overdue_email_result["failed_count"],
+        "reservation_ready_emails_sent": reservation_email_result["sent_count"],
+        "reservation_ready_emails_failed": reservation_email_result["failed_count"],
+    }
+)
 
     except Exception as error:
         print(
