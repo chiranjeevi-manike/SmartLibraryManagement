@@ -20,7 +20,8 @@ from app.models.notification import Notification
 from app.schemas.issue import (
     IssueCreate,
     IssueResponse,
-    ReturnResponse
+    IssueHistoryResponse,
+    ReturnResponse,
 )
 
 from app.repositories import issue as issue_repository
@@ -169,7 +170,7 @@ def get_overdue_issues(
 
 @router.get(
     "/user/{user_id}",
-    response_model=list[IssueResponse]
+    response_model=list[IssueHistoryResponse]
 )
 def get_user_history(
     user_id: int,
@@ -205,10 +206,32 @@ def get_user_history(
             detail="You do not have permission to access this resource"
         )
 
-    return issue_repository.get_user_issue_history(
-        db,
-        user_id
-    )
+    issues = issue_repository.get_user_issue_history(
+    db,
+    user_id
+)
+
+    return [
+        {
+            "id": issue.id,
+            "user_id": issue.user_id,
+            "book_id": issue.book_id,
+            "book_copy_id": issue.book_copy_id,
+            "accession_number": (
+                issue.book_copy.accession_number
+                if issue.book_copy
+                else None
+            ),
+            "issue_date": issue.issue_date,
+            "due_date": issue.due_date,
+            "return_date": issue.return_date,
+            "status": issue.status,
+            "overdue_days": issue.overdue_days,
+            "fine_amount": float(issue.fine_amount or 0),
+            "renewal_count": issue.renewal_count,
+        }
+        for issue in issues
+    ]
 
 
 # --------------------------------------------------
@@ -389,17 +412,38 @@ def return_book(
 
 @router.get(
     "/me/issues",
-    response_model=list[IssueResponse]
+    response_model=list[IssueHistoryResponse]
 )
 def get_my_issues(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    return issue_repository.get_user_issue_history(
-        db,
-        current_user.id
-    )
+    issues = issue_repository.get_user_issue_history(
+    db,
+    current_user.id
+)
 
+    return [
+        {
+            "id": issue.id,
+            "user_id": issue.user_id,
+            "book_id": issue.book_id,
+            "book_copy_id": issue.book_copy_id,
+            "accession_number": (
+                issue.book_copy.accession_number
+                if issue.book_copy
+                else None
+            ),
+            "issue_date": issue.issue_date,
+            "due_date": issue.due_date,
+            "return_date": issue.return_date,
+            "status": issue.status,
+            "overdue_days": issue.overdue_days,
+            "fine_amount": float(issue.fine_amount or 0),
+            "renewal_count": issue.renewal_count,
+        }
+        for issue in issues
+    ]
 
 # --------------------------------------------------
 # MEMBER - MY ACTIVE ISSUES

@@ -39,3 +39,23 @@ class ReturnResponse(BaseModel):
     status: str
 
     waiting_reservation: WaitingReservation | None = None
+
+
+class IssueHistoryResponse(BaseModel):
+    id: int
+    user_id: int
+    book_id: int
+    book_copy_id: int | None = None
+    accession_number: str | None = None
+
+    issue_date: datetime
+    due_date: datetime
+    return_date: datetime | None = None
+
+    status: str
+    overdue_days: int = 0
+    fine_amount: float = 0.0
+    renewal_count: int = 0
+
+    class Config:
+        from_attributes = True

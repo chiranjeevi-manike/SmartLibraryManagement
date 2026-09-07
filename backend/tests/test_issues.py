@@ -662,3 +662,50 @@ def test_renewal_blocked_when_another_member_has_active_reservation(
     )
 
     assert response.status_code == 400
+
+
+def test_issue_history_includes_book_copy_and_accession_number(
+    client,
+    db,
+    member_headers,
+    test_member,
+    test_book,
+    test_book_copies,
+):
+    issue = Issue(
+        user_id=test_member.id,
+        book_id=test_book.id,
+        book_copy_id=test_book_copies[0].id,
+        issue_date=datetime.utcnow(),
+        due_date=datetime.utcnow() + timedelta(days=14),
+        status="ISSUED",
+        overdue_days=0,
+        fine_amount=0,
+        renewal_count=0,
+    )
+
+    db.add(issue)
+    db.flush()
+
+    response = client.get(
+        "/issues/me/issues",
+        headers=member_headers,
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert len(data) >= 1
+
+    history_item = next(
+        item
+        for item in data
+        if item["id"] == issue.id
+    )
+
+    assert history_item["book_copy_id"] == test_book_copies[0].id
+    assert (
+        history_item["accession_number"]
+        == test_book_copies[0].accession_number
+    )
