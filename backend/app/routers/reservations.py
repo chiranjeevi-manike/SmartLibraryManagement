@@ -177,6 +177,73 @@ def get_my_reservations(
     return reservations
 
 
+
+# --------------------------------------------------
+# GET USER RESERVATION HISTORY
+#
+# MEMBER:
+#   can see only own history
+#
+# ADMIN/LIBRARIAN:
+#   can see any user's history
+# --------------------------------------------------
+
+@router.get(
+    "/user/{user_id}",
+    response_model=list[ReservationResponse]
+)
+def get_user_reservation_history(
+    user_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    role_name = current_user.role.name.upper()
+
+    # MEMBER can see only own history
+    if role_name == "MEMBER":
+        if current_user.id != user_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=(
+                    "You can view only your own "
+                    "reservation history"
+                )
+            )
+
+    # Only ADMIN/LIBRARIAN/MEMBER are permitted
+    elif role_name not in ("ADMIN", "LIBRARIAN"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=(
+                "You do not have permission "
+                "to access this resource"
+            )
+        )
+
+    # Verify that requested user exists
+    user = (
+        db.query(User)
+        .filter(User.id == user_id)
+        .first()
+    )
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+
+    return (
+        db.query(Reservation)
+        .filter(Reservation.user_id == user_id)
+        .order_by(
+            Reservation.reserved_at.desc(),
+            Reservation.id.desc()
+        )
+        .all()
+    )
+
+
 @router.put("/expire-ready")
 def expire_ready_reservations(
     db: Session = Depends(get_db),

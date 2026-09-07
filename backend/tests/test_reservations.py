@@ -670,3 +670,115 @@ def test_fulfillment_creates_issue_with_physical_copy(
     )
 
     assert updated_book.available_copies == 0
+
+
+def test_member_can_view_own_reservation_history(
+    client,
+    db,
+    member_headers,
+    test_member,
+    test_book,
+):
+    reservation = Reservation(
+        user_id=test_member.id,
+        book_id=test_book.id,
+        status="FULFILLED",
+    )
+
+    db.add(reservation)
+    db.flush()
+
+    response = client.get(
+        f"/reservations/user/{test_member.id}",
+        headers=member_headers,
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert len(data) == 1
+    assert data[0]["id"] == reservation.id
+    assert data[0]["user_id"] == test_member.id
+    assert data[0]["book_id"] == test_book.id
+    assert data[0]["status"] == "FULFILLED"
+
+
+def test_member_cannot_view_another_users_reservation_history(
+    client,
+    db,
+    member_headers,
+    test_member,
+):
+    other_member = User(
+        username="history_member2",
+        email="history_member2@example.com",
+        password=hash_password("Password123"),
+        full_name="History Member Two",
+        role_id=test_member.role_id,
+    )
+
+    db.add(other_member)
+    db.flush()
+
+    response = client.get(
+        f"/reservations/user/{other_member.id}",
+        headers=member_headers,
+    )
+
+    assert response.status_code == 403
+
+    assert (
+        response.json()["detail"]
+        == "You can view only your own reservation history"
+    )
+
+
+
+def test_admin_can_view_any_users_reservation_history(
+    client,
+    db,
+    admin_headers,
+    test_member,
+    test_book,
+):
+    reservation = Reservation(
+        user_id=test_member.id,
+        book_id=test_book.id,
+        status="CANCELLED",
+    )
+
+    db.add(reservation)
+    db.flush()
+
+    response = client.get(
+        f"/reservations/user/{test_member.id}",
+        headers=admin_headers,
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert len(data) == 1
+    assert data[0]["id"] == reservation.id
+    assert data[0]["user_id"] == test_member.id
+    assert data[0]["status"] == "CANCELLED"
+
+
+
+def test_reservation_history_returns_404_for_unknown_user(
+    client,
+    admin_headers,
+):
+    response = client.get(
+        "/reservations/user/99999",
+        headers=admin_headers,
+    )
+
+    assert response.status_code == 404
+
+    assert (
+        response.json()["detail"]
+        == "User not found"
+    )
