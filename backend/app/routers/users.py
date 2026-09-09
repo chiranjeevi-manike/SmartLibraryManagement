@@ -28,6 +28,22 @@ from app.schemas.user import (
     ChangePasswordRequest
 )
 
+
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    HTTPException,
+    UploadFile,
+    status,
+)
+
+
+import csv
+import io
+
+from email_validator import EmailNotValidError, validate_email
+
 # from app.utils.security import hash_password
 from app.utils.security import hash_password, verify_password
 from app.schemas.user import UserUpdate
@@ -129,6 +145,240 @@ def create_user(
         "role": role.name
     }
 
+
+
+@router.post("/import/csv")
+async def import_users_from_csv(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(
+        require_role("ADMIN")
+    ),
+):
+    # Only CSV files are accepted
+    if (
+        not file.filename
+        or not file.filename.lower().endswith(".csv")
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Only CSV files are allowed",
+        )
+
+    content = await file.read()
+
+    # Maximum upload size: 2 MB
+    if len(content) > 2 * 1024 * 1024:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="CSV file must not exceed 2 MB",
+        )
+
+    try:
+        decoded_content = content.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="CSV file must use UTF-8 encoding",
+        )
+
+    reader = csv.DictReader(
+        io.StringIO(decoded_content)
+    )
+
+    required_columns = {
+        "username",
+        "email",
+        "full_name",
+        "password",
+    }
+
+    received_columns = set(
+        reader.fieldnames or []
+    )
+
+    missing_columns = (
+        required_columns - received_columns
+    )
+
+    if missing_columns:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                "Missing required columns: "
+                + ", ".join(
+                    sorted(missing_columns)
+                )
+            ),
+        )
+
+    roles = {
+        role.name.upper(): role.id
+        for role in db.query(Role).all()
+    }
+
+    existing_usernames = {
+        username.lower()
+        for (username,) in db.query(
+            User.username
+        ).all()
+    }
+
+    existing_emails = {
+        email.lower()
+        for (email,) in db.query(
+            User.email
+        ).all()
+    }
+
+    imported_users = []
+    errors = []
+
+    seen_usernames = set()
+    seen_emails = set()
+
+    for row_number, row in enumerate(
+        reader,
+        start=2,
+    ):
+        username = (
+            row.get("username") or ""
+        ).strip()
+
+        email = (
+            row.get("email") or ""
+        ).strip().lower()
+
+        full_name = (
+            row.get("full_name") or ""
+        ).strip()
+
+        password = row.get("password") or ""
+
+        role_name = (
+            row.get("role_name") or "MEMBER"
+        ).strip().upper()
+
+        row_errors = []
+
+        if not username:
+            row_errors.append(
+                "Username is required"
+            )
+
+        if not full_name:
+            row_errors.append(
+                "Full name is required"
+            )
+
+        if len(password) < 8:
+            row_errors.append(
+                "Password must contain at least "
+                "8 characters"
+            )
+
+        if not email:
+            row_errors.append(
+                "Email is required"
+            )
+        else:
+            try:
+                email = validate_email(
+                    email,
+                    check_deliverability=False,
+                ).normalized
+            except EmailNotValidError:
+                row_errors.append(
+                    "Invalid email address"
+                )
+
+        username_key = username.lower()
+        email_key = email.lower()
+
+        if username_key in existing_usernames:
+            row_errors.append(
+                "Username already exists"
+            )
+        elif username_key in seen_usernames:
+            row_errors.append(
+                "Duplicate username in CSV"
+            )
+
+        if email_key in existing_emails:
+            row_errors.append(
+                "Email already exists"
+            )
+        elif email_key in seen_emails:
+            row_errors.append(
+                "Duplicate email in CSV"
+            )
+
+        if role_name not in roles:
+            row_errors.append(
+                f"Invalid role: {role_name}"
+            )
+
+        if row_errors:
+            errors.append(
+                {
+                    "row": row_number,
+                    "username": username,
+                    "errors": row_errors,
+                }
+            )
+            continue
+
+        new_user = User(
+            username=username,
+            email=email,
+            full_name=full_name,
+            password=hash_password(
+                password
+            ),
+            role_id=roles[role_name],
+            is_active=True,
+        )
+
+        db.add(new_user)
+        imported_users.append(new_user)
+
+        seen_usernames.add(username_key)
+        seen_emails.add(email_key)
+
+    try:
+        db.commit()
+
+        for imported_user in imported_users:
+            db.refresh(imported_user)
+
+    except Exception:
+        db.rollback()
+
+        raise HTTPException(
+            status_code=(
+                status.HTTP_500_INTERNAL_SERVER_ERROR
+            ),
+            detail="Unable to import users",
+        )
+
+    return {
+        "filename": file.filename,
+        "imported_count": len(
+            imported_users
+        ),
+        "failed_count": len(errors),
+        "imported_users": [
+            {
+                "id": imported_user.id,
+                "username": (
+                    imported_user.username
+                ),
+                "email": imported_user.email,
+            }
+            for imported_user in imported_users
+        ],
+        "errors": errors,
+    }
 
 
 
