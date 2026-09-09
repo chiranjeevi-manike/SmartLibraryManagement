@@ -1,5 +1,10 @@
 import { API_BASE_URL } from "../config";
-import { useEffect, useMemo, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 
@@ -31,6 +36,14 @@ export default function Users() {
     actionLoading,
     setActionLoading,
   ] = useState(false);
+
+  const [importing, setImporting] =
+  useState(false);
+
+const [importResult, setImportResult] =
+  useState(null);
+
+const importInputRef = useRef(null);
 
   const [error, setError] =
     useState("");
@@ -346,6 +359,90 @@ export default function Users() {
     setError("");
     setSuccess("");
   };
+
+
+
+  const downloadCsvTemplate = () => {
+  const content = [
+    "username,email,full_name,password,role_name",
+    "member001,member001@example.com,Member One,Member@123,MEMBER",
+  ].join("\n");
+
+  const blob = new Blob(
+    [content],
+    {
+      type: "text/csv;charset=utf-8",
+    }
+  );
+
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+
+  link.href = url;
+  link.download = "member_import_template.csv";
+  link.click();
+
+  URL.revokeObjectURL(url);
+};
+
+const importUsersCsv = async (event) => {
+  const file = event.target.files?.[0];
+
+  if (!file) {
+    return;
+  }
+
+  resetMessages();
+  setImportResult(null);
+
+  if (!file.name.toLowerCase().endsWith(".csv")) {
+    setError("Please select a CSV file.");
+    event.target.value = "";
+    return;
+  }
+
+  const formData = new FormData();
+  formData.append("file", file);
+
+  setImporting(true);
+
+  try {
+    const response = await axios.post(
+      `${API_BASE_URL}/users/import/csv`,
+      formData,
+      {
+        headers: {
+          Authorization:
+            authConfig.headers.Authorization,
+        },
+      }
+    );
+
+    const result = response.data;
+
+    setImportResult(result);
+
+    setSuccess(
+      `${result.imported_count} user(s) imported. ` +
+      `${result.failed_count} row(s) failed.`
+    );
+
+    setPage(1);
+    await fetchUsers();
+  } catch (err) {
+    if (!handleAuthError(err)) {
+      setError(
+        err?.response?.data?.detail ||
+          "Unable to import CSV file."
+      );
+    }
+  } finally {
+    setImporting(false);
+    event.target.value = "";
+  }
+};
+
+
 
   // ==================================================
   // ADD USER
@@ -764,6 +861,56 @@ export default function Users() {
           opacity: 0.55;
           cursor: not-allowed;
         }
+
+
+        .users-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex-wrap: wrap;
+}
+
+.users-import-btn {
+  border: 1px solid #2563eb;
+  border-radius: 7px;
+  padding: 8px 13px;
+  background: white;
+  color: #2563eb;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 12px;
+}
+
+.users-import-btn:hover {
+  background: #eff6ff;
+}
+
+.users-import-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.users-template-btn {
+  border: 1px solid #cbd5e1;
+  border-radius: 7px;
+  padding: 8px 13px;
+  background: white;
+  color: #475569;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 12px;
+}
+
+.users-import-errors {
+  margin: -7px 0 16px;
+  padding: 12px 16px;
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  border-radius: 7px;
+  color: #9a3412;
+  font-size: 12px;
+}
+
 
         /* ==========================================
            MESSAGES
@@ -1350,12 +1497,44 @@ export default function Users() {
           </p>
         </div>
 
-        <button
-          className="users-primary-btn"
-          onClick={openAddModal}
-        >
-          + Add User
-        </button>
+   <div className="users-header-actions">
+  <button
+    type="button"
+    className="users-template-btn"
+    onClick={downloadCsvTemplate}
+  >
+    Download CSV Template
+  </button>
+
+  <input
+    ref={importInputRef}
+    type="file"
+    accept=".csv,text/csv"
+    onChange={importUsersCsv}
+    style={{ display: "none" }}
+  />
+
+  <button
+    type="button"
+    className="users-import-btn"
+    disabled={importing}
+    onClick={() =>
+      importInputRef.current?.click()
+    }
+  >
+    {importing
+      ? "Importing..."
+      : "Import Members CSV"}
+  </button>
+
+  <button
+    type="button"
+    className="users-primary-btn"
+    onClick={openAddModal}
+  >
+    + Add User
+  </button>
+</div>
       </div>
 
       {/* ==========================================
@@ -1373,6 +1552,25 @@ export default function Users() {
           {success}
         </div>
       )}
+
+
+{importResult?.errors?.length > 0 && (
+  <div className="users-import-errors">
+    <strong>Rows not imported:</strong>
+
+    <ul>
+      {importResult.errors.map((item) => (
+        <li key={`${item.row}-${item.username}`}>
+          Row {item.row}
+          {item.username
+            ? ` (${item.username})`
+            : ""}
+          : {item.errors.join(", ")}
+        </li>
+      ))}
+    </ul>
+  </div>
+)}
 
       {/* ==========================================
           SUMMARY
