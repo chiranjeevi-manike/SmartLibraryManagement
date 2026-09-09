@@ -16,6 +16,8 @@ from app.models.user import User
 from app.models.role import Role
 from app.models.reservation import Reservation
 from app.models.notification import Notification
+from app.models.renewal_history import RenewalHistory
+from app.models.fine_payment import FinePayment
 
 from app.schemas.issue import (
     IssueCreate,
@@ -552,6 +554,20 @@ def renew_book(
 
     try:
 
+
+
+        existing_issue = (
+            db.query(Issue)
+            .filter(Issue.id == issue_id)
+            .first()
+        )
+
+        if not existing_issue:
+            raise ValueError("Issue record not found")
+
+        previous_due_date = existing_issue.due_date
+
+        
         # ---------------------------------------------
         # 1. Renew issue
         # ---------------------------------------------
@@ -559,6 +575,21 @@ def renew_book(
             db,
             issue_id
         )
+
+        renewal_history = RenewalHistory(
+            issue_id=issue.id,
+            user_id=issue.user_id,
+            book_id=issue.book_id,
+            previous_due_date=previous_due_date,
+            new_due_date=issue.due_date,
+            renewal_number=issue.renewal_count,
+            renewed_by=current_user.id,
+        )
+
+        db.add(renewal_history)
+
+
+
 
         # ---------------------------------------------
         # 2. Create renewal notification
@@ -737,6 +768,19 @@ def pay_fine(
     # Update fine payment
     issue.fine_status = "PAID"
     issue.fine_paid_at = datetime.utcnow()
+
+
+    fine_payment = FinePayment(
+        issue_id=issue.id,
+        user_id=issue.user_id,
+        book_id=issue.book_id,
+        amount=issue.fine_amount,
+        payment_method="MANUAL",
+        received_by=current_user.id,
+        paid_at=issue.fine_paid_at,
+    )
+
+    db.add(fine_payment)
 
     # Create payment notification
     payment_notification = Notification(

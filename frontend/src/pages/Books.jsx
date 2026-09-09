@@ -2,6 +2,10 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL ||
+  "http://localhost:8001";
+
 function Books() {
   // ==================================================
   // STATE
@@ -109,7 +113,7 @@ function Books() {
       }
 
       const response = await axios.get(
-        "https://smartlibrarymanagement-production.up.railway.app/books/",
+        `${API_BASE_URL}/books/`,
         {
           headers: getHeaders(),
         }
@@ -159,7 +163,7 @@ function Books() {
       }
 
       const response = await axios.get(
-        "https://smartlibrarymanagement-production.up.railway.app/authors/",
+        `${API_BASE_URL}/authors/`,
         {
           headers: getHeaders(),
         }
@@ -199,7 +203,7 @@ function Books() {
       }
 
       const response = await axios.get(
-        "https://smartlibrarymanagement-production.up.railway.app/categories/",
+        `${API_BASE_URL}/categories/`,
         {
           headers: getHeaders(),
         }
@@ -312,7 +316,7 @@ function Books() {
       };
 
       await axios.post(
-        "https://smartlibrarymanagement-production.up.railway.app/books/",
+        `${API_BASE_URL}/books/`,
         payload,
         {
           headers: getHeaders(),
@@ -397,7 +401,7 @@ function Books() {
       };
 
       await axios.put(
-        `https://smartlibrarymanagement-production.up.railway.app/books/${editingBook.id}`,
+        `${API_BASE_URL}/books/${editingBook.id}`,
         payload,
         {
           headers: getHeaders(),
@@ -451,7 +455,7 @@ function Books() {
 
     try {
       await axios.delete(
-        `https://smartlibrarymanagement-production.up.railway.app/books/${book.id}`,
+        `${API_BASE_URL}/books/${book.id}`,
         {
           headers: getHeaders(),
         }
@@ -904,6 +908,19 @@ function Books() {
                         <div
                           style={actionGroupStyle}
                         >
+
+                          <button
+                            onClick={() =>
+                              navigate(
+                                `/book-copies?book_id=${book.id}`
+                              )
+                            }
+                            style={editButtonStyle}
+                          >
+                          Copies
+                        </button>
+
+
                           <button
                             onClick={() =>
                               handleEditBook(book)

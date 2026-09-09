@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "../config";
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
@@ -54,7 +55,7 @@ function Notifications() {
       }
 
       const response = await axios.get(
-        "https://smartlibrarymanagement-production.up.railway.app/notifications/me",
+        "${API_BASE_URL}/notifications/me",
         {
           headers: getHeaders(),
         }
@@ -129,7 +130,7 @@ function Notifications() {
       setProcessingId(notification.id);
 
       await axios.put(
-        `https://smartlibrarymanagement-production.up.railway.app/notifications/${notification.id}/read`,
+        `${API_BASE_URL}/notifications/${notification.id}/read`,
         {},
         {
           headers: getHeaders(),
@@ -178,7 +179,7 @@ function Notifications() {
       setMarkingAll(true);
 
       await axios.put(
-        "https://smartlibrarymanagement-production.up.railway.app/notifications/me/read-all",
+        "${API_BASE_URL}/notifications/me/read-all",
         {},
         {
           headers: getHeaders(),

@@ -1,7 +1,9 @@
+
+import { API_BASE_URL } from "../config";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-const API_BASE_URL = "https://smartlibrarymanagement-production.up.railway.app";
+const API_URL = API_BASE_URL;
 
 function MemberRiskMonitoring() {
   const navigate = useNavigate();

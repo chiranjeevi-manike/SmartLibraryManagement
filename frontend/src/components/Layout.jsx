@@ -538,6 +538,14 @@ function Layout() {
                         Reminder Monitoring
                       </NavigationItem>
 
+
+                      <NavigationItem
+  to="/notification-delivery-monitoring"
+  icon="✉"
+>
+  Email Delivery Monitoring
+</NavigationItem>
+
                       <NavigationItem
                         to="/inventory-monitoring"
                         icon="▦"

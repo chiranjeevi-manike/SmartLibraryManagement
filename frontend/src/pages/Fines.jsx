@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "../config";
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
@@ -97,7 +98,7 @@ function Fines() {
 
   const fetchMemberFines = async () => {
     const response = await axios.get(
-      "https://smartlibrarymanagement-production.up.railway.app/issues/me/fines",
+      "${API_BASE_URL}/issues/me/fines",
       {
         headers: getHeaders(),
       }
@@ -116,14 +117,14 @@ function Fines() {
       paidResponse,
     ] = await Promise.all([
       axios.get(
-        "https://smartlibrarymanagement-production.up.railway.app/issues/fines/unpaid",
+        "${API_BASE_URL}/issues/fines/unpaid",
         {
           headers: getHeaders(),
         }
       ),
 
       axios.get(
-        "https://smartlibrarymanagement-production.up.railway.app/issues/fines/paid",
+        "${API_BASE_URL}/issues/fines/paid",
         {
           headers: getHeaders(),
         }
@@ -293,7 +294,7 @@ function Fines() {
       setProcessingId(issueId);
 
       await axios.put(
-        `https://smartlibrarymanagement-production.up.railway.app/issues/${issueId}/fine/pay`,
+        `${API_BASE_URL}/issues/${issueId}/fine/pay`,
         {},
         {
           headers: getHeaders(),

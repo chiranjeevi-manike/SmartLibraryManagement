@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "../config";
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
@@ -148,7 +149,7 @@ function Reports() {
       }
 
       const response = await axios.get(
-        `https://smartlibrarymanagement-production.up.railway.app${selected.endpoint}`,
+        `${API_BASE_URL}${selected.endpoint}`,
         {
           headers: getHeaders(),
           params,
@@ -232,7 +233,7 @@ function Reports() {
       );
 
       const response = await axios.get(
-        `https://smartlibrarymanagement-production.up.railway.app${selected.endpoint}`,
+        `${API_BASE_URL}${selected.endpoint}`,
         {
           headers: getHeaders(),
         }
@@ -289,7 +290,7 @@ function Reports() {
       }
 
       const response = await axios.get(
-        `https://smartlibrarymanagement-production.up.railway.app/reports/export/${reportType}/${format}`,
+        `${API_BASE_URL}/reports/export/${reportType}/${format}`,
         {
           headers: getHeaders(),
           params,

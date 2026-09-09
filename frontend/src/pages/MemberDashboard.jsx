@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "../config";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -33,7 +34,7 @@ function MemberDashboard() {
       }
 
       const userResponse = await axios.get(
-        "https://smartlibrarymanagement-production.up.railway.app/users/me",
+        "${API_BASE_URL}/users/me",
         {
           headers: getHeaders(),
         }
@@ -42,7 +43,7 @@ function MemberDashboard() {
       setUser(userResponse.data);
 
       const summaryResponse = await axios.get(
-        "https://smartlibrarymanagement-production.up.railway.app/issues/me/summary",
+        "${API_BASE_URL}/issues/me/summary",
         {
           headers: getHeaders(),
         }

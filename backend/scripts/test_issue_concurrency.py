@@ -21,7 +21,7 @@ from app.models.book_copy import BookCopy
 
 
 
-BOOK_ID = 6
+BOOK_ID = 1
 
 results = []
 results_lock = threading.Lock()

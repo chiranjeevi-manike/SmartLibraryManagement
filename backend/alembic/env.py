@@ -36,6 +36,10 @@ from app.database import Base, engine
 from app.models.book_copy import BookCopy
 target_metadata = Base.metadata
 
+from app.models.renewal_history import RenewalHistory
+from app.models.fine_payment import FinePayment
+from app.models.notification_delivery_history import NotificationDeliveryHistory
+
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
 # my_important_option = config.get_main_option("my_important_option")

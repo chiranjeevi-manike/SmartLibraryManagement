@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "../config";
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
@@ -61,7 +62,7 @@ function Recommendations() {
       setError("");
 
       const response = await axios.get(
-        "https://smartlibrarymanagement-production.up.railway.app/books/recommendations",
+        "${API_BASE_URL}/books/recommendations",
         {
           params: {
             limit: selectedLimit,

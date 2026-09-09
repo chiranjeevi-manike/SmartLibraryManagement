@@ -1,8 +1,10 @@
+
+import { API_BASE_URL } from "../config";
 import { useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 
-const API_BASE_URL = "https://smartlibrarymanagement-production.up.railway.app";
+const API_URL = API_BASE_URL;
 
 export default function ChangePassword() {
   const navigate = useNavigate();

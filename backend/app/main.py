@@ -57,6 +57,7 @@ from app.routers import audit_logs
 from app.models.book_rating import BookRating
 from app.routers import ratings
 from app.routers import analytics
+from app.routers import notification_deliveries
 
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -89,10 +90,12 @@ app.add_middleware(
         "http://localhost:5173",
         "http://127.0.0.1:5173",
         "http://localhost:4173",
- 	"http://localhost:4174",
+        "http://localhost:4174",
         "http://127.0.0.1:4173",
-	"http://127.0.0.1:4174",
-	"https://reasonable-growth-production-a6c1.up.railway.app",
+        "http://127.0.0.1:4174",
+        "http://localhost:8081",
+        "http://127.0.0.1:8081",
+        "https://reasonable-growth-production-a6c1.up.railway.app",
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -222,3 +225,4 @@ app.include_router(audit_logs.router)
 app.include_router(ratings.router)
 app.include_router(analytics.router)
 app.include_router(book_copies.router)
+app.include_router(notification_deliveries.router)

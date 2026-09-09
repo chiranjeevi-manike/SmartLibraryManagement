@@ -1,3 +1,5 @@
+
+import { API_BASE_URL } from "../config";
 import {
   useCallback,
   useEffect,
@@ -6,8 +8,7 @@ import {
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 
-const API_URL = "https://smartlibrarymanagement-production.up.railway.app";
-
+const API_URL = API_BASE_URL;
 const ACTIONS = [
   "BOOK_CREATED",
   "BOOK_UPDATED",

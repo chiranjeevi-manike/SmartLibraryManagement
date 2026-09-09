@@ -23,6 +23,8 @@ from app.schemas.book import (
     BookResponse
 )
 
+from app.models.book_copy import BookCopy
+
 from app.repositories import book as book_repository
 
 from app.services.audit_service import create_audit_log
@@ -106,6 +108,23 @@ def create_book(
             db,
             book
         )
+
+
+        # Create one physical record for every copy.
+        for copy_number in range(1, book.total_copies + 1):
+            physical_copy = BookCopy(
+                book_id=new_book.id,
+                accession_number=(
+                    f"BOOK-{new_book.id:06d}-"
+                    f"COPY-{copy_number:03d}"
+                ),
+                status="AVAILABLE",
+            )
+            db.add(physical_copy)
+
+        # Send physical-copy inserts to the database.
+        # The final commit below saves the book, copies and audit log together.
+        db.flush()
 
         # Create audit log
         create_audit_log(

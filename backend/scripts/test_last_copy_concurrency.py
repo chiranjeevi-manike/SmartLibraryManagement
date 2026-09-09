@@ -6,7 +6,7 @@ from sqlalchemy import text
 from app.database import SessionLocal
 
 
-BOOK_ID = 6
+BOOK_ID = 1
 
 results = []
 results_lock = threading.Lock()

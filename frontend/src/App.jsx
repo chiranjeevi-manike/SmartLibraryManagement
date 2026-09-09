@@ -36,7 +36,8 @@ import FineMonitoring from "./pages/FineMonitoring";
 import CirculationMonitoring from "./pages/CirculationMonitoring";
 import CollectionDevelopmentMonitoring from "./pages/CollectionDevelopmentMonitoring";
 import ExecutiveDashboard from "./pages/ExecutiveDashboard";
-
+import BookCopies from "./pages/BookCopies";
+import NotificationDeliveryMonitoring from "./pages/NotificationDeliveryMonitoring";
 
 function App() {
   return (
@@ -53,7 +54,7 @@ function App() {
           element={<ForgotPassword />}
         />
         
-
+       
         <Route path="/register" element={<Register />} />
 
         {/* Pages using Sidebar Layout */}
@@ -80,6 +81,11 @@ function App() {
           <Route
             path="/books"
             element={<Books />}
+          />
+
+          <Route
+            path="/book-copies"
+            element={<BookCopies />}
           />
 
           <Route
@@ -158,6 +164,11 @@ function App() {
           <Route
             path="/reminder-monitoring"
             element={<ReminderMonitoring />}
+          />
+
+          <Route
+            path="/notification-delivery-monitoring"
+            element={<NotificationDeliveryMonitoring />}
           />
 
           <Route

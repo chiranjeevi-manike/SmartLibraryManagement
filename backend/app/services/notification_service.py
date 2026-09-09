@@ -8,6 +8,59 @@ from app.models.notification import Notification
 from app.models.user import User
 from app.services.email_service import send_email
 from app.models.reservation import Reservation
+from app.models.notification_delivery_history import (
+    NotificationDeliveryHistory,
+)
+
+
+def send_tracked_email(
+    db: Session,
+    user_id: int,
+    to_email: str,
+    subject: str,
+    body: str,
+    reference_type: str,
+    reference_id: int,
+):
+    try:
+        send_email(
+            to_email=to_email,
+            subject=subject,
+            body=body,
+        )
+
+        history = NotificationDeliveryHistory(
+            user_id=user_id,
+            channel="EMAIL",
+            recipient=to_email,
+            subject=subject,
+            reference_type=reference_type,
+            reference_id=reference_id,
+            delivery_status="SENT",
+            error_message=None,
+        )
+
+        db.add(history)
+        db.flush()
+
+        return True
+
+    except Exception as error:
+        history = NotificationDeliveryHistory(
+            user_id=user_id,
+            channel="EMAIL",
+            recipient=to_email,
+            subject=subject,
+            reference_type=reference_type,
+            reference_id=reference_id,
+            delivery_status="FAILED",
+            error_message=str(error)[:500],
+        )
+
+        db.add(history)
+        db.flush()
+
+        raise
 
 def generate_due_reminders(db: Session):
 
@@ -220,10 +273,14 @@ def send_due_reminder_emails(db: Session):
 
         
         try:
-            send_email(
+            send_tracked_email(
+                db=db,
+                user_id=issue.user_id,
                 to_email=user.email,
                 subject=subject,
-                body=body
+                body=body,
+                reference_type="ISSUE_DUE",
+                reference_id=issue.id,
             )
 
             email_log = Notification(
@@ -328,10 +385,14 @@ def send_overdue_emails(db: Session):
         )
 
         try:
-            send_email(
+            send_tracked_email(
+                db=db,
+                user_id=issue.user_id,
                 to_email=user.email,
                 subject=subject,
-                body=body
+                body=body,
+                reference_type="ISSUE_OVERDUE",
+                reference_id=issue.id,
             )
 
             email_log = Notification(
@@ -435,10 +496,14 @@ def send_reservation_ready_emails(db: Session):
         )
 
         try:
-            send_email(
+            send_tracked_email(
+                db=db,
+                user_id=reservation.user_id,
                 to_email=user.email,
                 subject=subject,
-                body=body
+                body=body,
+                reference_type="RESERVATION_READY",
+                reference_id=reservation.id,
             )
 
             email_log = Notification(

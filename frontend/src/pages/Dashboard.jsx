@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "../config";
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
@@ -53,7 +54,7 @@ function Dashboard() {
 
         // Get logged-in admin
         const userResponse = await axios.get(
-          "https://smartlibrarymanagement-production.up.railway.app/users/me",
+          `${API_BASE_URL}/users/me`,
           {
             headers: getHeaders(),
           }
@@ -76,7 +77,7 @@ if (Number(currentUser.role_id) !== 2) {
 
         // Admin analytics dashboard
         const response = await axios.get(
-          "https://smartlibrarymanagement-production.up.railway.app/analytics/dashboard",
+          `${API_BASE_URL}/analytics/dashboard`,
           {
             headers: getHeaders(),
           }

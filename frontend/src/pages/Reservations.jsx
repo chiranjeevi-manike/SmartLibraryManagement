@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "../config";
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
@@ -79,7 +80,7 @@ function Reservations() {
       }
 
       const response = await axios.get(
-        "https://smartlibrarymanagement-production.up.railway.app/books/",
+        "${API_BASE_URL}/books/",
         {
           headers: getHeaders(),
         }
@@ -124,14 +125,14 @@ function Reservations() {
 
       if (isMember) {
         response = await axios.get(
-          "https://smartlibrarymanagement-production.up.railway.app/reservations/my",
+          "${API_BASE_URL}/reservations/my",
           {
             headers: getHeaders(),
           }
         );
       } else {
         response = await axios.get(
-          "https://smartlibrarymanagement-production.up.railway.app/reservations/",
+          "${API_BASE_URL}/reservations/",
           {
             headers: getHeaders(),
           }
@@ -179,7 +180,7 @@ function Reservations() {
 
     try {
       const response = await axios.get(
-        "https://smartlibrarymanagement-production.up.railway.app/reservations/my/queue",
+        "${API_BASE_URL}/reservations/my/queue",
         {
           headers: getHeaders(),
         }
@@ -253,7 +254,7 @@ function Reservations() {
       setReserving(true);
 
       await axios.post(
-        "https://smartlibrarymanagement-production.up.railway.app/reservations/",
+        "${API_BASE_URL}/reservations/",
         {
           book_id: Number(selectedBookId),
         },
@@ -303,7 +304,7 @@ function Reservations() {
 
     try {
       await axios.put(
-        `https://smartlibrarymanagement-production.up.railway.app/reservations/${reservation.id}/cancel`,
+        `${API_BASE_URL}/reservations/${reservation.id}/cancel`,
         {},
         {
           headers: getHeaders(),
@@ -365,7 +366,7 @@ function Reservations() {
 
     try {
       await axios.put(
-        `https://smartlibrarymanagement-production.up.railway.app/reservations/${reservation.id}/fulfill`,
+        `${API_BASE_URL}/reservations/${reservation.id}/fulfill`,
         {},
         {
           headers: getHeaders(),

@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "../config";
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
@@ -53,7 +54,7 @@ function LibrarianDashboard() {
 
         // Get logged-in user
         const userResponse = await axios.get(
-          "https://smartlibrarymanagement-production.up.railway.app/users/me",
+          "${API_BASE_URL}/users/me",
           {
             headers: getHeaders(),
           }
@@ -76,7 +77,7 @@ if (Number(currentUser.role_id) !== 3) {
 
         // Get librarian dashboard
         const dashboardResponse = await axios.get(
-          "https://smartlibrarymanagement-production.up.railway.app/users/librarian/dashboard",
+          `${API_BASE_URL}/users/librarian/dashboard`,
           {
             headers: getHeaders(),
           }

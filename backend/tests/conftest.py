@@ -20,6 +20,9 @@ from app.models import (
     audit_log,
     book_rating,
     book_copy,
+    renewal_history,
+    fine_payment,
+    notification_delivery_history,
 )
 from app.models import book
 

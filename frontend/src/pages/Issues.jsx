@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "../config";
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
@@ -87,7 +88,7 @@ function Issues() {
       }
 
       const response = await axios.get(
-        "https://smartlibrarymanagement-production.up.railway.app/books/",
+        `${API_BASE_URL}/books/`,
         {
           headers: getHeaders(),
         }
@@ -138,8 +139,8 @@ function Issues() {
       }
 
       const endpoint = isMember
-        ? "https://smartlibrarymanagement-production.up.railway.app/issues/me/active"
-        : "https://smartlibrarymanagement-production.up.railway.app/issues/active";
+        ? `${API_BASE_URL}/issues/me/active`
+        : `${API_BASE_URL}/issues/active`;
 
       const response = await axios.get(
         endpoint,
@@ -237,7 +238,7 @@ function Issues() {
       setSelectedUserId("");
 
       const response = await axios.get(
-        "https://smartlibrarymanagement-production.up.railway.app/users/search",
+        `${API_BASE_URL}/users/search`,
         {
           params: {
             query: searchText,
@@ -312,7 +313,7 @@ function Issues() {
       setIssuing(true);
 
       await axios.post(
-        "https://smartlibrarymanagement-production.up.railway.app/issues/",
+        `${API_BASE_URL}/issues/`,
         {
           user_id: Number(selectedUserId),
           book_id: Number(selectedBookId),
@@ -369,7 +370,7 @@ function Issues() {
 
     try {
       await axios.put(
-        `https://smartlibrarymanagement-production.up.railway.app/issues/${issue.id}/renew`,
+        `${API_BASE_URL}/issues/${issue.id}/renew`,
         {},
         {
           headers: getHeaders(),
@@ -420,7 +421,7 @@ function Issues() {
 
     try {
       const response = await axios.post(
-        `https://smartlibrarymanagement-production.up.railway.app/issues/${issue.id}/return`,
+        `${API_BASE_URL}/issues/${issue.id}/return`,
         {},
         {
           headers: getHeaders(),
