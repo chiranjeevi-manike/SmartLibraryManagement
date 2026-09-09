@@ -1,0 +1,68 @@
+services:
+
+  db:
+    image: postgres:16
+    container_name: smart-library-db
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_DB: smart_library_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+
+    ports:
+      - "5433:5432"
+
+    volumes:
+      - smart_library_pgdata:/var/lib/postgresql/data
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d smart_library_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+
+  backend:
+    build:
+      context: ./backend
+
+    container_name: smart-library-backend
+    restart: unless-stopped
+
+    env_file:
+      - ./backend/.env.docker
+
+
+    depends_on:
+      db:
+        condition: service_healthy
+
+    environment:
+      DATABASE_HOST: db
+      DATABASE_PORT: 5432
+      DATABASE_NAME: smart_library_db
+      DATABASE_USER: postgres
+      DATABASE_PASSWORD: postgres
+
+    ports:
+      - "8001:8000"
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_BASE_URL: http://localhost:8001
+
+    container_name: smart-library-frontend
+    restart: unless-stopped
+
+    depends_on:
+      - backend
+
+    ports:
+      - "8081:80"
+
+
+volumes:
+  smart_library_pgdata:

@@ -35,3 +35,5 @@ __pycache__/
 # OS files
 .DS_Store
 Thumbs.db
+# PostgreSQL database backups
+*.dump
