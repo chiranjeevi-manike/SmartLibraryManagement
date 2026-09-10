@@ -30,6 +30,9 @@ function Books() {
   const [importResult, setImportResult] =
   useState(null);
 
+  const [exporting, setExporting] =
+  useState(false);
+
   const importInputRef = useRef(null);
 
   const [showForm, setShowForm] = useState(false);
@@ -343,6 +346,66 @@ const downloadCsvTemplate = () => {
   document.body.removeChild(link);
 
   URL.revokeObjectURL(url);
+};
+
+
+
+const exportBooksCsv = async () => {
+  setError("");
+  setExporting(true);
+
+  try {
+    const response = await axios.get(
+      `${API_BASE_URL}/books/export/csv`,
+      {
+        headers: getHeaders(),
+        responseType: "blob",
+      }
+    );
+
+    const disposition =
+      response.headers["content-disposition"];
+
+    const filenameMatch =
+      disposition?.match(
+        /filename="?([^"]+)"?/
+      );
+
+    const filename = filenameMatch?.[1] ||
+      "library_books.csv";
+
+    const url = URL.createObjectURL(
+      response.data
+    );
+
+    const link =
+      document.createElement("a");
+
+    link.href = url;
+    link.download = filename;
+
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    URL.revokeObjectURL(url);
+
+  } catch (error) {
+    console.error(
+      "Book CSV Export Error:",
+      error
+    );
+
+    if (handleAuthError(error)) {
+      return;
+    }
+
+    setError(
+      "Unable to export books CSV."
+    );
+  } finally {
+    setExporting(false);
+  }
 };
 
 
@@ -678,6 +741,34 @@ const importBooksCsv = async (event) => {
           </p>
         </div>
 
+
+<button
+  type="button"
+  disabled={exporting}
+  onClick={exportBooksCsv}
+  style={{
+    padding: "10px 14px",
+    borderRadius: "7px",
+    border: "1px solid #15803d",
+    background: "#ffffff",
+    color: "#15803d",
+    fontWeight: "600",
+    cursor: exporting
+      ? "not-allowed"
+      : "pointer",
+    opacity: exporting ? 0.6 : 1,
+  }}
+>
+  {exporting
+    ? "Exporting..."
+    : "Export Books CSV"}
+</button>
+
+
+
+
+
+
         {canManageBooks && (
   <div
     style={{
@@ -686,6 +777,7 @@ const importBooksCsv = async (event) => {
       alignItems: "center",
       flexWrap: "wrap",
     }}
+
   >
     <button
       type="button"

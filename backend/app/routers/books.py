@@ -40,6 +40,8 @@ from app.utils.dependencies import (
     require_roles
 )
 
+from datetime import datetime
+from fastapi.responses import StreamingResponse
 
 from sqlalchemy import func
 from app.models.issue import Issue
@@ -571,6 +573,105 @@ def get_books(
         "returned": len(books),
         "books": books
     }
+
+
+
+@router.get("/export/csv")
+def export_books_csv(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(
+        require_roles("ADMIN", "LIBRARIAN")
+    ),
+):
+    books = (
+        db.query(Book)
+        .join(
+            Author,
+            Book.author_id == Author.id,
+        )
+        .join(
+            Category,
+            Book.category_id == Category.id,
+        )
+        .order_by(Book.id.asc())
+        .all()
+    )
+
+    output = io.StringIO(newline="")
+    writer = csv.writer(output)
+
+    writer.writerow([
+        "id",
+        "isbn",
+        "title",
+        "author_id",
+        "author",
+        "category_id",
+        "category",
+        "total_copies",
+        "available_copies",
+        "issued_copies",
+        "is_active",
+    ])
+
+    def safe_value(value):
+        if value is None:
+            return ""
+
+        text_value = str(value)
+
+        if text_value.startswith(
+            ("=", "+", "-", "@")
+        ):
+            return "'" + text_value
+
+        return text_value
+
+    for book in books:
+        issued_copies = max(
+            int(book.total_copies or 0)
+            - int(book.available_copies or 0),
+            0,
+        )
+
+        writer.writerow([
+            book.id,
+            safe_value(book.isbn),
+            safe_value(book.title),
+            book.author_id,
+            safe_value(
+                book.author.name
+                if book.author
+                else ""
+            ),
+            book.category_id,
+            safe_value(
+                book.category.name
+                if book.category
+                else ""
+            ),
+            book.total_copies,
+            book.available_copies,
+            issued_copies,
+            book.is_active,
+        ])
+
+    csv_content = output.getvalue()
+    output.close()
+
+    filename = (
+        "library_books_"
+        f"{datetime.utcnow():%Y%m%d_%H%M%S}.csv"
+    )
+
+    return StreamingResponse(
+        iter([csv_content]),
+        media_type="text/csv; charset=utf-8",
+        headers={
+            "Content-Disposition":
+                f'attachment; filename="{filename}"'
+        },
+    )
 
 # ---------------------------------------------------------
 # BOOK AVAILABILITY
