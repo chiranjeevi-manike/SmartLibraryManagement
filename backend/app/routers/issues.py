@@ -785,6 +785,171 @@ def renew_book(
         raise
 
 
+
+# --------------------------------------------------
+# EXPORT FINES AND PAYMENT HISTORY
+# ADMIN and LIBRARIAN only
+# --------------------------------------------------
+
+@router.get("/fines/export/csv")
+def export_fines_csv(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(
+        require_roles("ADMIN", "LIBRARIAN")
+    ),
+):
+    fine_issues = (
+        db.query(Issue)
+        .filter(Issue.fine_amount > 0)
+        .order_by(Issue.id.asc())
+        .all()
+    )
+
+    payments = (
+        db.query(FinePayment)
+        .order_by(FinePayment.id.asc())
+        .all()
+    )
+
+    # Current system records one payment per issue.
+    payments_by_issue = {
+        payment.issue_id: payment
+        for payment in payments
+    }
+
+    users_by_id = {
+        user.id: user
+        for user in db.query(User).all()
+    }
+
+    output = io.StringIO(newline="")
+    writer = csv.writer(output)
+
+    writer.writerow([
+        "issue_id",
+        "member_id",
+        "username",
+        "member_name",
+        "member_email",
+        "book_id",
+        "isbn",
+        "book_title",
+        "overdue_days",
+        "fine_amount",
+        "fine_status",
+        "return_date",
+        "payment_id",
+        "payment_method",
+        "paid_at",
+        "received_by",
+        "received_by_username",
+    ])
+
+    def safe_value(value):
+        if value is None:
+            return ""
+
+        text_value = str(value)
+
+        if text_value.startswith(
+            ("=", "+", "-", "@")
+        ):
+            return "'" + text_value
+
+        return text_value
+
+    def date_value(value):
+        return (
+            value.isoformat()
+            if value
+            else ""
+        )
+
+    for issue in fine_issues:
+        payment = payments_by_issue.get(
+            issue.id
+        )
+
+        receiver = (
+            users_by_id.get(payment.received_by)
+            if payment
+            else None
+        )
+
+        writer.writerow([
+            issue.id,
+            issue.user_id,
+            safe_value(
+                issue.user.username
+                if issue.user
+                else ""
+            ),
+            safe_value(
+                issue.user.full_name
+                if issue.user
+                else ""
+            ),
+            safe_value(
+                issue.user.email
+                if issue.user
+                else ""
+            ),
+            issue.book_id,
+            safe_value(
+                issue.book.isbn
+                if issue.book
+                else ""
+            ),
+            safe_value(
+                issue.book.title
+                if issue.book
+                else ""
+            ),
+            issue.overdue_days or 0,
+            float(issue.fine_amount or 0),
+            safe_value(issue.fine_status),
+            date_value(issue.return_date),
+            payment.id if payment else "",
+            safe_value(
+                payment.payment_method
+                if payment
+                else ""
+            ),
+            date_value(
+                payment.paid_at
+                if payment
+                else issue.fine_paid_at
+            ),
+            (
+                payment.received_by
+                if payment
+                else ""
+            ),
+            safe_value(
+                receiver.username
+                if receiver
+                else ""
+            ),
+        ])
+
+    csv_content = output.getvalue()
+    output.close()
+
+    filename = (
+        "library_fines_"
+        f"{datetime.utcnow():%Y%m%d_%H%M%S}.csv"
+    )
+
+    return StreamingResponse(
+        iter([csv_content]),
+        media_type="text/csv; charset=utf-8",
+        headers={
+            "Content-Disposition":
+                f'attachment; filename="{filename}"'
+        },
+    )
+
+
 # --------------------------------------------------
 # GET UNPAID FINES
 # ADMIN and LIBRARIAN only
