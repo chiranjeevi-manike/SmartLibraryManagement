@@ -17,6 +17,12 @@ from app.services.reservation_service import (
     process_expired_ready_reservations
 )
 
+import csv
+import io
+
+from datetime import datetime
+from fastapi.responses import StreamingResponse
+
 from app.utils.dependencies import (
     get_current_user,
     require_roles
@@ -145,6 +151,106 @@ def create_reservation(
 
         db.rollback()
         raise
+
+
+# --------------------------------------------------
+# EXPORT RESERVATION HISTORY
+# ADMIN and LIBRARIAN only
+# --------------------------------------------------
+
+@router.get("/export/csv")
+def export_reservations_csv(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(
+        require_roles("ADMIN", "LIBRARIAN")
+    ),
+):
+    rows = (
+        db.query(
+            Reservation,
+            User,
+            Book,
+        )
+        .join(
+            User,
+            Reservation.user_id == User.id,
+        )
+        .join(
+            Book,
+            Reservation.book_id == Book.id,
+        )
+        .order_by(Reservation.id.asc())
+        .all()
+    )
+
+    output = io.StringIO(newline="")
+    writer = csv.writer(output)
+
+    writer.writerow([
+        "reservation_id",
+        "member_id",
+        "username",
+        "member_name",
+        "member_email",
+        "book_id",
+        "isbn",
+        "book_title",
+        "reserved_at",
+        "status",
+        "ready_until",
+    ])
+
+    def safe_value(value):
+        if value is None:
+            return ""
+
+        text_value = str(value)
+
+        if text_value.startswith(
+            ("=", "+", "-", "@")
+        ):
+            return "'" + text_value
+
+        return text_value
+
+    def date_value(value):
+        return (
+            value.isoformat()
+            if value
+            else ""
+        )
+
+    for reservation, user, book in rows:
+        writer.writerow([
+            reservation.id,
+            user.id,
+            safe_value(user.username),
+            safe_value(user.full_name),
+            safe_value(user.email),
+            book.id,
+            safe_value(book.isbn),
+            safe_value(book.title),
+            date_value(reservation.reserved_at),
+            safe_value(reservation.status),
+            date_value(reservation.ready_until),
+        ])
+
+    csv_content = output.getvalue()
+    output.close()
+
+    filename = (
+        "library_reservations_"
+        f"{datetime.utcnow():%Y%m%d_%H%M%S}.csv"
+    )
+
+    return StreamingResponse(
+        iter([csv_content]),
+        media_type="text/csv; charset=utf-8",
+        headers={
+            "Content-Disposition":
+                f'attachment; filename="{filename}"'
+        },
+    )
 
 
 @router.get("/", response_model=list[ReservationResponse])

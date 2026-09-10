@@ -13,6 +13,8 @@ function Reservations() {
   const [loading, setLoading] = useState(true);
   const [reserving, setReserving] = useState(false);
   const [error, setError] = useState("");
+  const [exporting, setExporting] =
+  useState(false);
 
   const navigate = useNavigate();
 
@@ -492,6 +494,71 @@ function Reservations() {
     );
   }
 
+
+
+
+
+  // ==================================================
+// EXPORT RESERVATIONS CSV
+// ==================================================
+
+const exportReservationsCsv = async () => {
+  setError("");
+  setExporting(true);
+
+  try {
+    const response = await axios.get(
+      `${API_BASE_URL}/reservations/export/csv`,
+      {
+        headers: getHeaders(),
+        responseType: "blob",
+      }
+    );
+
+    const disposition =
+      response.headers["content-disposition"];
+
+    const filenameMatch =
+      disposition?.match(
+        /filename="?([^"]+)"?/
+      );
+
+    const filename = filenameMatch?.[1] ||
+      "library_reservations.csv";
+
+    const url = URL.createObjectURL(
+      response.data
+    );
+
+    const link =
+      document.createElement("a");
+
+    link.href = url;
+    link.download = filename;
+
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    URL.revokeObjectURL(url);
+
+  } catch (error) {
+    console.error(
+      "Reservation CSV Export Error:",
+      error
+    );
+
+    if (handleAuthError(error)) {
+      return;
+    }
+
+    setError(
+      "Unable to export reservations CSV."
+    );
+  } finally {
+    setExporting(false);
+  }
+};
   // ==================================================
   // PAGE
   // ==================================================
@@ -500,19 +567,45 @@ function Reservations() {
     <div style={pageStyle}>
       {/* HEADER */}
 
-      <div style={pageHeaderStyle}>
-        <h1 style={pageTitleStyle}>
-          {isMember
-            ? "My Reservations"
-            : "Reservations"}
-        </h1>
+     <div style={pageHeaderStyle}>
+  <div>
+    <h1 style={pageTitleStyle}>
+      {isMember
+        ? "My Reservations"
+        : "Reservations"}
+    </h1>
 
-        <p style={pageSubtitleStyle}>
-          {isMember
-            ? "Reserve unavailable books and track your queue position."
-            : "Manage library reservation requests and pickups."}
-        </p>
-      </div>
+    <p style={pageSubtitleStyle}>
+      {isMember
+        ? "Reserve unavailable books and track your queue position."
+        : "Manage library reservation requests and pickups."}
+    </p>
+  </div>
+
+  {isStaff && (
+    <button
+      type="button"
+      disabled={exporting}
+      onClick={exportReservationsCsv}
+      style={{
+        padding: "10px 15px",
+        borderRadius: "7px",
+        border: "1px solid #15803d",
+        background: "#ffffff",
+        color: "#15803d",
+        fontWeight: "600",
+        cursor: exporting
+          ? "not-allowed"
+          : "pointer",
+        opacity: exporting ? 0.6 : 1,
+      }}
+    >
+      {exporting
+        ? "Exporting..."
+        : "Export Reservations CSV"}
+    </button>
+  )}
+</div>
 
       {/* ERROR */}
 
@@ -840,6 +933,11 @@ const pageStyle = {
 };
 
 const pageHeaderStyle = {
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  gap: "16px",
+  flexWrap: "wrap",
   marginBottom: "22px",
 };
 
