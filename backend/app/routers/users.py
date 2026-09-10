@@ -1,6 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
+from fastapi.responses import StreamingResponse
+
 from app.database import get_db
 from app.models.user import User
 from app.models.role import Role
@@ -1132,6 +1134,100 @@ def get_admin_dashboard(
             "unread": unread_notifications
         }
     }
+
+
+
+@router.get("/export/csv")
+def export_users_csv(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(
+        require_role("ADMIN")
+    ),
+):
+    users = (
+        db.query(User)
+        .join(
+            Role,
+            User.role_id == Role.id,
+        )
+        .order_by(User.id.asc())
+        .all()
+    )
+
+    output = io.StringIO(newline="")
+
+    writer = csv.writer(output)
+
+    writer.writerow([
+        "id",
+        "username",
+        "email",
+        "full_name",
+        "role",
+        "is_active",
+        "last_login",
+        "failed_login_attempts",
+        "locked_until",
+    ])
+
+    def safe_value(value):
+        if value is None:
+            return ""
+
+        text_value = str(value)
+
+        # Protect spreadsheet applications from
+        # interpreting user data as formulas.
+        if text_value.startswith(
+            ("=", "+", "-", "@")
+        ):
+            return "'" + text_value
+
+        return text_value
+
+    for user in users:
+        writer.writerow([
+            user.id,
+            safe_value(user.username),
+            safe_value(user.email),
+            safe_value(user.full_name),
+            safe_value(
+                user.role.name
+                if user.role
+                else ""
+            ),
+            user.is_active,
+            (
+                user.last_login.isoformat()
+                if user.last_login
+                else ""
+            ),
+            user.failed_login_attempts,
+            (
+                user.locked_until.isoformat()
+                if user.locked_until
+                else ""
+            ),
+        ])
+
+    csv_content = output.getvalue()
+    output.close()
+
+    filename = (
+        "library_users_"
+        f"{datetime.utcnow():%Y%m%d_%H%M%S}.csv"
+    )
+
+    headers = {
+        "Content-Disposition":
+            f'attachment; filename="{filename}"'
+    }
+
+    return StreamingResponse(
+        iter([csv_content]),
+        media_type="text/csv; charset=utf-8",
+        headers=headers,
+    )
 
 
 

@@ -45,6 +45,9 @@ const [importResult, setImportResult] =
 
 const importInputRef = useRef(null);
 
+const [exporting, setExporting] =
+  useState(false);
+
   const [error, setError] =
     useState("");
 
@@ -383,6 +386,61 @@ const importInputRef = useRef(null);
   link.click();
 
   URL.revokeObjectURL(url);
+};
+
+
+const exportUsersCsv = async () => {
+  resetMessages();
+  setExporting(true);
+
+  try {
+    const response = await axios.get(
+      `${API_BASE_URL}/users/export/csv`,
+      {
+        ...authConfig,
+        responseType: "blob",
+      }
+    );
+
+    const disposition =
+      response.headers["content-disposition"];
+
+    const filenameMatch =
+      disposition?.match(
+        /filename="?([^"]+)"?/
+      );
+
+    const filename = filenameMatch?.[1] ||
+      "library_users.csv";
+
+    const url = URL.createObjectURL(
+      response.data
+    );
+
+    const link =
+      document.createElement("a");
+
+    link.href = url;
+    link.download = filename;
+
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    URL.revokeObjectURL(url);
+
+    setSuccess(
+      "Users CSV exported successfully."
+    );
+  } catch (err) {
+    if (!handleAuthError(err)) {
+      setError(
+        "Unable to export users CSV."
+      );
+    }
+  } finally {
+    setExporting(false);
+  }
 };
 
 const importUsersCsv = async (event) => {
@@ -1498,6 +1556,18 @@ const importUsersCsv = async (event) => {
         </div>
 
    <div className="users-header-actions">
+  
+  <button
+  type="button"
+  className="users-template-btn"
+  disabled={exporting}
+  onClick={exportUsersCsv}
+>
+  {exporting
+    ? "Exporting..."
+    : "Export Users CSV"}
+</button>
+  
   <button
     type="button"
     className="users-template-btn"
