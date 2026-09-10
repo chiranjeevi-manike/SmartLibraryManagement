@@ -5,6 +5,11 @@ from fastapi import (
     status
 )
 
+import csv
+import io
+
+from fastapi.responses import StreamingResponse
+
 from sqlalchemy.orm import Session
 
 from datetime import datetime, timedelta
@@ -104,6 +109,135 @@ def issue_book(
 
         db.rollback()
         raise
+
+
+
+# --------------------------------------------------
+# EXPORT ISSUE HISTORY AS CSV
+# ADMIN and LIBRARIAN only
+# --------------------------------------------------
+
+@router.get("/export/csv")
+def export_issues_csv(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(
+        require_roles("ADMIN", "LIBRARIAN")
+    ),
+):
+    issues = (
+        db.query(Issue)
+        .order_by(Issue.id.asc())
+        .all()
+    )
+
+    output = io.StringIO(newline="")
+    writer = csv.writer(output)
+
+    writer.writerow([
+        "issue_id",
+        "member_id",
+        "username",
+        "member_name",
+        "member_email",
+        "book_id",
+        "isbn",
+        "book_title",
+        "book_copy_id",
+        "accession_number",
+        "issue_date",
+        "due_date",
+        "return_date",
+        "status",
+        "overdue_days",
+        "fine_amount",
+        "fine_status",
+        "fine_paid_at",
+        "renewal_count",
+    ])
+
+    def safe_value(value):
+        if value is None:
+            return ""
+
+        text_value = str(value)
+
+        if text_value.startswith(
+            ("=", "+", "-", "@")
+        ):
+            return "'" + text_value
+
+        return text_value
+
+    def date_value(value):
+        return (
+            value.isoformat()
+            if value
+            else ""
+        )
+
+    for issue in issues:
+        writer.writerow([
+            issue.id,
+            issue.user_id,
+            safe_value(
+                issue.user.username
+                if issue.user
+                else ""
+            ),
+            safe_value(
+                issue.user.full_name
+                if issue.user
+                else ""
+            ),
+            safe_value(
+                issue.user.email
+                if issue.user
+                else ""
+            ),
+            issue.book_id,
+            safe_value(
+                issue.book.isbn
+                if issue.book
+                else ""
+            ),
+            safe_value(
+                issue.book.title
+                if issue.book
+                else ""
+            ),
+            issue.book_copy_id or "",
+            safe_value(
+                issue.book_copy.accession_number
+                if issue.book_copy
+                else ""
+            ),
+            date_value(issue.issue_date),
+            date_value(issue.due_date),
+            date_value(issue.return_date),
+            safe_value(issue.status),
+            issue.overdue_days or 0,
+            float(issue.fine_amount or 0),
+            safe_value(issue.fine_status),
+            date_value(issue.fine_paid_at),
+            issue.renewal_count or 0,
+        ])
+
+    csv_content = output.getvalue()
+    output.close()
+
+    filename = (
+        "library_issues_"
+        f"{datetime.utcnow():%Y%m%d_%H%M%S}.csv"
+    )
+
+    return StreamingResponse(
+        iter([csv_content]),
+        media_type="text/csv; charset=utf-8",
+        headers={
+            "Content-Disposition":
+                f'attachment; filename="{filename}"'
+        },
+    )
 
 
 # --------------------------------------------------
