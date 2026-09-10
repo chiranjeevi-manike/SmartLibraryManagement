@@ -1,9 +1,14 @@
 from fastapi import (
     APIRouter,
     Depends,
+    File,
     HTTPException,
-    status
+    UploadFile,
+    status,
 )
+
+import csv
+import io
 
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
@@ -45,6 +50,264 @@ router = APIRouter(
     tags=["Books"]
 )
 
+
+
+@router.post("/import/csv")
+async def import_books_from_csv(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(
+        require_roles("ADMIN", "LIBRARIAN")
+    ),
+):
+    if (
+        not file.filename
+        or not file.filename.lower().endswith(".csv")
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Only CSV files are allowed",
+        )
+
+    content = await file.read()
+
+    if len(content) > 2 * 1024 * 1024:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="CSV file must not exceed 2 MB",
+        )
+
+    try:
+        decoded_content = content.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="CSV file must use UTF-8 encoding",
+        )
+
+    reader = csv.DictReader(
+        io.StringIO(decoded_content)
+    )
+
+    required_columns = {
+        "isbn",
+        "title",
+        "author_id",
+        "category_id",
+        "total_copies",
+    }
+
+    received_columns = set(
+        reader.fieldnames or []
+    )
+
+    missing_columns = (
+        required_columns - received_columns
+    )
+
+    if missing_columns:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                "Missing required columns: "
+                + ", ".join(
+                    sorted(missing_columns)
+                )
+            ),
+        )
+
+    author_ids = {
+        author_id
+        for (author_id,) in db.query(
+            Author.id
+        ).all()
+    }
+
+    category_ids = {
+        category_id
+        for (category_id,) in db.query(
+            Category.id
+        ).all()
+    }
+
+    existing_isbns = {
+        isbn.strip().lower()
+        for (isbn,) in db.query(
+            Book.isbn
+        ).all()
+        if isbn
+    }
+
+    seen_isbns = set()
+    valid_books = []
+    errors = []
+
+    for row_number, row in enumerate(
+        reader,
+        start=2,
+    ):
+        isbn = (
+            row.get("isbn") or ""
+        ).strip()
+
+        title = (
+            row.get("title") or ""
+        ).strip()
+
+        row_errors = []
+
+        try:
+            author_id = int(
+                row.get("author_id") or ""
+            )
+        except ValueError:
+            author_id = None
+            row_errors.append(
+                "author_id must be an integer"
+            )
+
+        try:
+            category_id = int(
+                row.get("category_id") or ""
+            )
+        except ValueError:
+            category_id = None
+            row_errors.append(
+                "category_id must be an integer"
+            )
+
+        try:
+            total_copies = int(
+                row.get("total_copies") or ""
+            )
+
+            if total_copies <= 0:
+                row_errors.append(
+                    "total_copies must be greater than 0"
+                )
+        except ValueError:
+            total_copies = None
+            row_errors.append(
+                "total_copies must be an integer"
+            )
+
+        normalized_isbn = isbn.lower()
+
+        if not isbn:
+            row_errors.append(
+                "ISBN is required"
+            )
+        elif normalized_isbn in existing_isbns:
+            row_errors.append(
+                "ISBN already exists"
+            )
+        elif normalized_isbn in seen_isbns:
+            row_errors.append(
+                "Duplicate ISBN in CSV file"
+            )
+
+        if not title:
+            row_errors.append(
+                "Title is required"
+            )
+
+        if (
+            author_id is not None
+            and author_id not in author_ids
+        ):
+            row_errors.append(
+                "Author not found"
+            )
+
+        if (
+            category_id is not None
+            and category_id not in category_ids
+        ):
+            row_errors.append(
+                "Category not found"
+            )
+
+        if row_errors:
+            errors.append({
+                "row": row_number,
+                "isbn": isbn,
+                "errors": row_errors,
+            })
+            continue
+
+        seen_isbns.add(normalized_isbn)
+
+        valid_books.append({
+            "isbn": isbn,
+            "title": title,
+            "author_id": author_id,
+            "category_id": category_id,
+            "total_copies": total_copies,
+        })
+
+    imported_books = []
+
+    try:
+        for book_data in valid_books:
+            book_create = BookCreate(
+                **book_data
+            )
+
+            new_book = (
+                book_repository.create_book(
+                    db,
+                    book_create,
+                )
+            )
+
+            for copy_number in range(
+                1,
+                book_create.total_copies + 1,
+            ):
+                db.add(
+                    BookCopy(
+                        book_id=new_book.id,
+                        accession_number=(
+                            f"BOOK-{new_book.id:06d}-"
+                            f"COPY-{copy_number:03d}"
+                        ),
+                        status="AVAILABLE",
+                    )
+                )
+
+            create_audit_log(
+                db=db,
+                user_id=current_user.id,
+                action="BOOK_IMPORTED",
+                entity_type="BOOK",
+                entity_id=new_book.id,
+                details=(
+                    f"Imported book from CSV: "
+                    f"{new_book.title}"
+                ),
+            )
+
+            imported_books.append({
+                "id": new_book.id,
+                "isbn": new_book.isbn,
+                "title": new_book.title,
+            })
+
+        db.commit()
+
+    except Exception:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Unable to import books",
+        )
+
+    return {
+        "imported_count": len(imported_books),
+        "failed_count": len(errors),
+        "imported_books": imported_books,
+        "errors": errors,
+    }
 
 @router.post(
     "/",

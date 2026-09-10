@@ -1,4 +1,9 @@
-import { useEffect, useState } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+} from "react";
+
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 
@@ -18,6 +23,14 @@ function Books() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
+
+  const [importing, setImporting] =
+  useState(false);
+
+  const [importResult, setImportResult] =
+  useState(null);
+
+  const importInputRef = useRef(null);
 
   const [showForm, setShowForm] = useState(false);
   const [editingBook, setEditingBook] = useState(null);
@@ -285,6 +298,110 @@ function Books() {
       setShowForm(true);
     }
   };
+
+
+
+
+
+  // ==================================================
+// BOOK CSV IMPORT
+// ==================================================
+
+const downloadCsvTemplate = () => {
+  const content = [
+    [
+      "isbn",
+      "title",
+      "author_id",
+      "category_id",
+      "total_copies",
+    ].join(","),
+    [
+      "9780000000001",
+      "Sample Book",
+      "1",
+      "1",
+      "5",
+    ].join(","),
+  ].join("\n");
+
+  const blob = new Blob(
+    [content],
+    {
+      type: "text/csv;charset=utf-8;",
+    }
+  );
+
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+
+  link.href = url;
+  link.download = "books_import_template.csv";
+
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+
+  URL.revokeObjectURL(url);
+};
+
+
+const importBooksCsv = async (event) => {
+  const file = event.target.files?.[0];
+
+  event.target.value = "";
+
+  if (!file) {
+    return;
+  }
+
+  if (
+    !file.name.toLowerCase().endsWith(".csv")
+  ) {
+    setError("Please select a CSV file.");
+    return;
+  }
+
+  setError("");
+  setImportResult(null);
+  setImporting(true);
+
+  const formData = new FormData();
+
+  formData.append("file", file);
+
+  try {
+    const response = await axios.post(
+      `${API_BASE_URL}/books/import/csv`,
+      formData,
+      {
+        headers: getHeaders(),
+      }
+    );
+
+    setImportResult(response.data);
+
+    await fetchBooks();
+
+  } catch (error) {
+    console.error(
+      "Book CSV Import Error:",
+      error
+    );
+
+    if (handleAuthError(error)) {
+      return;
+    }
+
+    setError(
+      error.response?.data?.detail ||
+        "Unable to import books."
+    );
+  } finally {
+    setImporting(false);
+  }
+};
+
 
   // ==================================================
   // ADD BOOK
@@ -562,20 +679,126 @@ function Books() {
         </div>
 
         {canManageBooks && (
-          <button
-            onClick={handleAddButton}
-            style={
-              showForm
-                ? cancelTopButtonStyle
-                : addButtonStyle
-            }
-          >
-            {showForm
-              ? "Cancel"
-              : "+ Add Book"}
-          </button>
-        )}
+  <div
+    style={{
+      display: "flex",
+      gap: "10px",
+      alignItems: "center",
+      flexWrap: "wrap",
+    }}
+  >
+    <button
+      type="button"
+      onClick={downloadCsvTemplate}
+      style={{
+        padding: "10px 14px",
+        borderRadius: "7px",
+        border: "1px solid #cbd5e1",
+        background: "#ffffff",
+        color: "#475569",
+        fontWeight: "600",
+        cursor: "pointer",
+      }}
+    >
+      Download CSV Template
+    </button>
+
+    <input
+      ref={importInputRef}
+      type="file"
+      accept=".csv,text/csv"
+      onChange={importBooksCsv}
+      style={{ display: "none" }}
+    />
+
+    <button
+      type="button"
+      disabled={importing}
+      onClick={() =>
+        importInputRef.current?.click()
+      }
+      style={{
+        padding: "10px 14px",
+        borderRadius: "7px",
+        border: "1px solid #2563eb",
+        background: "#ffffff",
+        color: "#2563eb",
+        fontWeight: "600",
+        cursor: importing
+          ? "not-allowed"
+          : "pointer",
+        opacity: importing ? 0.6 : 1,
+      }}
+    >
+      {importing
+        ? "Importing..."
+        : "Import Books CSV"}
+    </button>
+
+    <button
+      type="button"
+      onClick={handleAddButton}
+      style={
+        showForm
+          ? cancelTopButtonStyle
+          : addButtonStyle
+      }
+    >
+      {showForm
+        ? "Cancel"
+        : "+ Add Book"}
+    </button>
+  </div>
+)}
       </div>
+
+
+      {importResult && (
+  <div
+    style={{
+      marginBottom: "16px",
+      padding: "12px 14px",
+      borderRadius: "8px",
+      background:
+        importResult.failed_count > 0
+          ? "#fef3c7"
+          : "#dcfce7",
+      color:
+        importResult.failed_count > 0
+          ? "#92400e"
+          : "#166534",
+      border:
+        importResult.failed_count > 0
+          ? "1px solid #fde68a"
+          : "1px solid #bbf7d0",
+    }}
+  >
+    <div>
+      {importResult.imported_count} book(s)
+      imported.{" "}
+      {importResult.failed_count} row(s)
+      failed.
+    </div>
+
+    {importResult.errors?.length > 0 && (
+      <ul
+        style={{
+          margin: "8px 0 0",
+          paddingLeft: "20px",
+        }}
+      >
+        {importResult.errors.map(
+          (item, index) => (
+            <li key={`${item.row}-${index}`}>
+              Row {item.row}:{" "}
+              {item.errors.join(", ")}
+            </li>
+          )
+        )}
+      </ul>
+    )}
+  </div>
+)}
 
       {/* SUMMARY CARDS */}
 
@@ -957,6 +1180,10 @@ function Books() {
     </div>
   );
 }
+
+
+
+
 
 // ==================================================
 // SUMMARY CARD
