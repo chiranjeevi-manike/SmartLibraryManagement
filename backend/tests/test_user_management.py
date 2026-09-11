@@ -1,6 +1,9 @@
 from app.models.role import Role
 from app.models.user import User
 
+from datetime import datetime, timedelta
+
+from app.utils.security import hash_password
 
 def get_role(db, role_name: str):
     role = (
@@ -223,3 +226,165 @@ def test_admin_can_create_user_with_json_body(
         created_user.password
         != "JsonMember123!"
     )
+
+
+def test_user_search_runs_before_pagination(
+    client,
+    db,
+    admin_headers,
+):
+    member_role = get_role(
+        db,
+        "MEMBER",
+    )
+
+    users = []
+
+    for number in range(12):
+        users.append(
+            User(
+                username=(
+                    f"pagination_user_{number}"
+                ),
+                email=(
+                    f"pagination_user_{number}"
+                    "@example.com"
+                ),
+                full_name=(
+                    f"Pagination User {number}"
+                ),
+                password=hash_password(
+                    "Pagination123!"
+                ),
+                role_id=member_role.id,
+                is_active=True,
+            )
+        )
+
+    db.add_all(users)
+    db.flush()
+
+    response = client.get(
+        "/users/",
+        params={
+            "skip": 0,
+            "limit": 5,
+            "search": "pagination_user_11",
+        },
+        headers=admin_headers,
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert data["total"] == 1
+    assert len(data["users"]) == 1
+    assert (
+        data["users"][0]["username"]
+        == "pagination_user_11"
+    )
+
+
+def test_users_can_be_filtered_by_role_and_status(
+    client,
+    db,
+    admin_headers,
+):
+    librarian_role = get_role(
+        db,
+        "LIBRARIAN",
+    )
+
+    inactive_librarian = User(
+        username="inactive_librarian_test",
+        email=(
+            "inactive_librarian_test"
+            "@example.com"
+        ),
+        full_name="Inactive Librarian Test",
+        password=hash_password(
+            "Inactive123!"
+        ),
+        role_id=librarian_role.id,
+        is_active=False,
+    )
+
+    db.add(inactive_librarian)
+    db.flush()
+
+    response = client.get(
+        "/users/",
+        params={
+            "role": "LIBRARIAN",
+            "is_active": False,
+            "limit": 100,
+        },
+        headers=admin_headers,
+    )
+
+    assert response.status_code == 200
+
+    users = response.json()["users"]
+
+    assert any(
+        user["username"]
+        == "inactive_librarian_test"
+        for user in users
+    )
+
+    assert all(
+        user["role"] == "LIBRARIAN"
+        and user["is_active"] is False
+        for user in users
+    )
+
+
+def test_users_can_be_filtered_by_lock_status(
+    client,
+    db,
+    admin_headers,
+):
+    member_role = get_role(
+        db,
+        "MEMBER",
+    )
+
+    locked_user = User(
+        username="locked_filter_test",
+        email="locked_filter_test@example.com",
+        full_name="Locked Filter Test",
+        password=hash_password(
+            "LockedUser123!"
+        ),
+        role_id=member_role.id,
+        is_active=True,
+        failed_login_attempts=5,
+        locked_until=(
+            datetime.utcnow()
+            + timedelta(minutes=30)
+        ),
+    )
+
+    db.add(locked_user)
+    db.flush()
+
+    response = client.get(
+        "/users/",
+        params={
+            "security": "LOCKED",
+            "limit": 100,
+        },
+        headers=admin_headers,
+    )
+
+    assert response.status_code == 200
+
+    usernames = {
+        user["username"]
+        for user in response.json()["users"]
+    }
+
+    assert "locked_filter_test" in usernames
+
+
