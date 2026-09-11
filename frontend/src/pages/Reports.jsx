@@ -106,6 +106,51 @@ function Reports() {
     },
   ];
 
+
+  const quickCsvExports = [
+  {
+    key: "users",
+    title: "Users",
+    description:
+      "Registered users, roles and account status.",
+    endpoint: "/users/export/csv",
+    filename: "library_users.csv",
+    adminOnly: true,
+  },
+  {
+    key: "books",
+    title: "Books",
+    description:
+      "Book catalogue and physical-copy availability.",
+    endpoint: "/books/export/csv",
+    filename: "library_books.csv",
+  },
+  {
+    key: "issues",
+    title: "Issue History",
+    description:
+      "Complete borrowing and return history.",
+    endpoint: "/issues/export/csv",
+    filename: "library_issues.csv",
+  },
+  {
+    key: "fines",
+    title: "Fines",
+    description:
+      "Paid and unpaid fines with payment details.",
+    endpoint: "/issues/fines/export/csv",
+    filename: "library_fines.csv",
+  },
+  {
+    key: "reservations",
+    title: "Reservations",
+    description:
+      "Complete reservation status history.",
+    endpoint: "/reservations/export/csv",
+    filename: "library_reservations.csv",
+  },
+];
+
   const supportsDateFilter =
     reportType === "issued-books" ||
     reportType === "issue-history";
@@ -346,6 +391,78 @@ function Reports() {
       setExporting("");
     }
   };
+
+
+  const handleQuickCsvExport = async (
+  report
+) => {
+  if (report.adminOnly && !isAdmin) {
+    setError(
+      "Only administrators can export users."
+    );
+    return;
+  }
+
+  try {
+    setExporting(`csv-${report.key}`);
+    setError("");
+
+    const response = await axios.get(
+      `${API_BASE_URL}${report.endpoint}`,
+      {
+        headers: getHeaders(),
+        responseType: "blob",
+      }
+    );
+
+    const disposition =
+      response.headers[
+        "content-disposition"
+      ] || "";
+
+    const filenameMatch =
+      disposition.match(
+        /filename="?([^"]+)"?/i
+      );
+
+    const filename =
+      filenameMatch?.[1]?.trim() ||
+      report.filename;
+
+    const blobUrl =
+      window.URL.createObjectURL(
+        new Blob([response.data])
+      );
+
+    const anchor =
+      document.createElement("a");
+
+    anchor.href = blobUrl;
+    anchor.download = filename;
+
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+
+    window.URL.revokeObjectURL(blobUrl);
+
+  } catch (error) {
+    console.error(
+      "Quick CSV Export Error:",
+      error
+    );
+
+    if (handleAuthError(error)) {
+      return;
+    }
+
+    setError(
+      `Unable to export ${report.title} CSV.`
+    );
+  } finally {
+    setExporting("");
+  }
+};
 
   // ==================================================
   // FORMATTERS
@@ -1161,6 +1278,82 @@ function Reports() {
         </div>
       </div>
 
+
+      {/* QUICK CSV EXPORTS */}
+
+<div style={quickExportSectionStyle}>
+  <div style={quickExportHeaderStyle}>
+    <div>
+      <h2 style={reportTitleStyle}>
+        Quick CSV Exports
+      </h2>
+
+      <p style={reportDescriptionStyle}>
+        Download operational data for backup,
+        analysis or administrative reporting.
+      </p>
+    </div>
+  </div>
+
+  <div style={quickExportGridStyle}>
+    {quickCsvExports
+      .filter(
+        (report) =>
+          !report.adminOnly || isAdmin
+      )
+      .map((report) => {
+        const isExporting =
+          exporting === `csv-${report.key}`;
+
+        return (
+          <div
+            key={report.key}
+            style={quickExportCardStyle}
+          >
+            <div style={quickExportCardBodyStyle}>
+              <div style={quickExportIconStyle}>
+                CSV
+              </div>
+
+              <div>
+                <h3 style={quickExportTitleStyle}>
+                  {report.title}
+                </h3>
+
+                <p
+                  style={
+                    quickExportDescriptionStyle
+                  }
+                >
+                  {report.description}
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              disabled={Boolean(exporting)}
+              onClick={() =>
+                handleQuickCsvExport(report)
+              }
+              style={{
+                ...quickExportButtonStyle,
+                opacity: exporting ? 0.6 : 1,
+                cursor: exporting
+                  ? "not-allowed"
+                  : "pointer",
+              }}
+            >
+              {isExporting
+                ? "Downloading..."
+                : "Download CSV"}
+            </button>
+          </div>
+        );
+      })}
+  </div>
+</div>
+
       {/* REPORT CONTROLS */}
 
       <div style={controlsStyle}>
@@ -1425,6 +1618,89 @@ const staffBadgeStyle = {
   backgroundColor: "#dbeafe",
   color: "#1d4ed8",
   borderRadius: "16px",
+  fontSize: "11px",
+  fontWeight: "700",
+};
+
+
+
+// ==================================================
+// QUICK CSV EXPORTS
+// ==================================================
+
+const quickExportSectionStyle = {
+  backgroundColor: "#ffffff",
+  border: "1px solid #e5e7eb",
+  borderRadius: "12px",
+  padding: "17px",
+  marginBottom: "20px",
+  boxShadow:
+    "0 3px 10px rgba(15,23,42,0.04)",
+};
+
+const quickExportHeaderStyle = {
+  marginBottom: "14px",
+};
+
+const quickExportGridStyle = {
+  display: "grid",
+  gridTemplateColumns:
+    "repeat(auto-fit, minmax(210px, 1fr))",
+  gap: "12px",
+};
+
+const quickExportCardStyle = {
+  display: "flex",
+  flexDirection: "column",
+  justifyContent: "space-between",
+  gap: "14px",
+  padding: "14px",
+  border: "1px solid #e2e8f0",
+  borderRadius: "10px",
+  backgroundColor: "#f8fafc",
+};
+
+const quickExportCardBodyStyle = {
+  display: "flex",
+  alignItems: "flex-start",
+  gap: "11px",
+};
+
+const quickExportIconStyle = {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  width: "40px",
+  height: "40px",
+  minWidth: "40px",
+  borderRadius: "9px",
+  backgroundColor: "#dcfce7",
+  color: "#15803d",
+  fontSize: "10px",
+  fontWeight: "800",
+};
+
+const quickExportTitleStyle = {
+  margin: 0,
+  color: "#0f172a",
+  fontSize: "14px",
+  fontWeight: "700",
+};
+
+const quickExportDescriptionStyle = {
+  margin: "4px 0 0",
+  color: "#64748b",
+  fontSize: "11px",
+  lineHeight: "1.45",
+};
+
+const quickExportButtonStyle = {
+  width: "100%",
+  padding: "8px 12px",
+  border: "1px solid #15803d",
+  borderRadius: "7px",
+  backgroundColor: "#ffffff",
+  color: "#15803d",
   fontSize: "11px",
   fontWeight: "700",
 };
