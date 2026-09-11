@@ -541,37 +541,26 @@ const importUsersCsv = async (event) => {
     setActionLoading(true);
 
     try {
-      const params =
-        new URLSearchParams();
+            const payload = {
+        username:
+          addForm.username.trim(),
 
-      params.append(
-        "username",
-        addForm.username.trim()
-      );
+        email:
+          addForm.email.trim().toLowerCase(),
 
-      params.append(
-        "email",
-        addForm.email.trim()
-      );
+        full_name:
+          addForm.full_name.trim(),
 
-      params.append(
-        "full_name",
-        addForm.full_name.trim()
-      );
+        password:
+          addForm.password,
 
-      params.append(
-        "password",
-        addForm.password
-      );
-
-      params.append(
-        "role_name",
-        addForm.role_name
-      );
+        role_name:
+          addForm.role_name,
+      };
 
       await axios.post(
-        `${API_BASE_URL}/users/?${params.toString()}`,
-        null,
+        `${API_BASE_URL}/users/`,
+        payload,
         authConfig
       );
 

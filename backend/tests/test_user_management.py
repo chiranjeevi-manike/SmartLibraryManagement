@@ -182,3 +182,44 @@ def test_admin_cannot_remove_own_admin_role(
     )
 
     assert admin.role_id == admin_role.id
+
+
+def test_admin_can_create_user_with_json_body(
+    client,
+    db,
+    admin_headers,
+):
+    response = client.post(
+        "/users/",
+        json={
+            "username": "jsonmember",
+            "email": "jsonmember@example.com",
+            "full_name": "JSON Member",
+            "password": "JsonMember123!",
+            "role_name": "MEMBER",
+        },
+        headers=admin_headers,
+    )
+
+    assert response.status_code == 201
+
+    data = response.json()
+
+    assert data["username"] == "jsonmember"
+    assert data["email"] == "jsonmember@example.com"
+    assert data["role"] == "MEMBER"
+    assert data["is_active"] is True
+
+    created_user = (
+        db.query(User)
+        .filter(
+            User.username == "jsonmember"
+        )
+        .first()
+    )
+
+    assert created_user is not None
+    assert (
+        created_user.password
+        != "JsonMember123!"
+    )

@@ -24,6 +24,7 @@ from app.utils.dependencies import (
 )
 
 from app.schemas.user import (
+    AdminUserCreate,
     UserUpdate,
     UserRoleUpdate,
     UserStatusUpdate,
@@ -82,17 +83,40 @@ def admin_only(
     }
 
 
-@router.post("/", status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/",
+    status_code=status.HTTP_201_CREATED
+)
 def create_user(
-    username: str,
-    email: str,
-    full_name: str,
-    password: str,
-    role_name: str = "MEMBER",
+    data: AdminUserCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_role("ADMIN"))
+    current_user: User = Depends(
+        require_role("ADMIN")
+    )
 ):
-    # Check duplicate username
+    username = data.username.strip().lower()
+    email = str(data.email).strip().lower()
+    full_name = data.full_name.strip()
+    role_name = data.role_name.strip().upper()
+
+    if len(username) < 3:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                "Username must contain at least "
+                "3 characters"
+            )
+        )
+
+    if len(full_name) < 2:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                "Full name must contain at least "
+                "2 characters"
+            )
+        )
+
     existing_username = (
         db.query(User)
         .filter(User.username == username)
@@ -105,7 +129,6 @@ def create_user(
             detail="Username already exists"
         )
 
-    # Check duplicate email
     existing_email = (
         db.query(User)
         .filter(User.email == email)
@@ -118,10 +141,9 @@ def create_user(
             detail="Email already exists"
         )
 
-    # Find requested role
     role = (
         db.query(Role)
-        .filter(Role.name == role_name.upper())
+        .filter(Role.name == role_name)
         .first()
     )
 
@@ -131,27 +153,49 @@ def create_user(
             detail="Invalid role"
         )
 
-    # Create user
-    new_user = User(
-        username=username,
-        email=email,
-        full_name=full_name,
-        password=hash_password(password),
-        role_id=role.id
-    )
+    try:
+        new_user = User(
+            username=username,
+            email=email,
+            full_name=full_name,
+            password=hash_password(
+                data.password
+            ),
+            role_id=role.id,
+            is_active=True
+        )
 
-    db.add(new_user)
-    db.commit()
-    db.refresh(new_user)
+        db.add(new_user)
+        db.flush()
 
-    return {
-        "id": new_user.id,
-        "username": new_user.username,
-        "email": new_user.email,
-        "full_name": new_user.full_name,
-        "role": role.name
-    }
+        create_audit_log(
+            db=db,
+            user_id=current_user.id,
+            action="USER_CREATED",
+            entity_type="USER",
+            entity_id=new_user.id,
+            details=(
+                f"Created user {new_user.username} "
+                f"with role {role.name}"
+            )
+        )
 
+        db.commit()
+        db.refresh(new_user)
+
+        return {
+            "id": new_user.id,
+            "username": new_user.username,
+            "email": new_user.email,
+            "full_name": new_user.full_name,
+            "role_id": new_user.role_id,
+            "role": role.name,
+            "is_active": new_user.is_active
+        }
+
+    except Exception:
+        db.rollback()
+        raise
 
 
 @router.post("/import/csv")
