@@ -180,7 +180,6 @@ const [exporting, setExporting] =
   // ==================================================
   // FETCH USERS
   // ==================================================
-
   const fetchUsers = async () => {
     setLoading(true);
     setError("");
@@ -189,27 +188,52 @@ const [exporting, setExporting] =
       const skip =
         (page - 1) * limit;
 
-      const response =
-        await axios.get(
-          `${API_BASE_URL}/users/?skip=${skip}&limit=${limit}`,
-          authConfig
-        );
+      const params = {
+        skip,
+        limit,
+
+        search:
+          searchText.trim() ||
+          undefined,
+
+        role:
+          roleFilter !== "ALL"
+            ? roleFilter
+            : undefined,
+
+        is_active:
+          statusFilter === "ACTIVE"
+            ? true
+            : statusFilter === "INACTIVE"
+              ? false
+              : undefined,
+
+        security:
+          securityFilter !== "ALL"
+            ? securityFilter
+            : undefined,
+      };
+
+      const response = await axios.get(
+        `${API_BASE_URL}/users/`,
+        {
+          ...authConfig,
+          params,
+        }
+      );
 
       setUsers(
         response.data.users || []
       );
 
       setTotal(
-        response.data.total || 0
+               response.data.total || 0
       );
     } catch (err) {
-      if (
-        !handleAuthError(err)
-      ) {
+      if (!handleAuthError(err)) {
         setError(
-          err?.response?.data
-            ?.detail ||
-            "Unable to load users. Please try again."
+          err?.response?.data?.detail ||
+            "Unable to load users."
         );
       }
     } finally {
@@ -221,106 +245,32 @@ const [exporting, setExporting] =
   // INITIAL LOAD
   // ==================================================
 
-  useEffect(() => {
-    if (!token) {
-      navigate("/");
-      return;
-    }
+    useEffect(() => {
+    const timer = setTimeout(
+      () => {
+        fetchUsers();
+      },
+      300
+    );
 
-    if (roleId !== 2) {
-      navigate("/");
-      return;
-    }
-
-    fetchUsers();
+    return () => {
+      clearTimeout(timer);
+    };
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, limit]);
+  }, [
+    page,
+    limit,
+    searchText,
+    roleFilter,
+    statusFilter,
+    securityFilter,
+  ]);
 
   // ==================================================
   // FILTERING
   // ==================================================
-
-  const filteredUsers =
-    useMemo(() => {
-      const q = searchText
-        .trim()
-        .toLowerCase();
-
-      return users.filter(
-        (user) => {
-          const matchesSearch =
-            !q ||
-            String(
-              user.id
-            ).includes(q) ||
-            (
-              user.username || ""
-            )
-              .toLowerCase()
-              .includes(q) ||
-            (
-              user.full_name || ""
-            )
-              .toLowerCase()
-              .includes(q) ||
-            (user.email || "")
-              .toLowerCase()
-              .includes(q);
-
-          const matchesRole =
-            roleFilter ===
-              "ALL" ||
-            user.role ===
-              roleFilter;
-
-          const matchesStatus =
-            statusFilter ===
-              "ALL" ||
-            (statusFilter ===
-              "ACTIVE" &&
-              user.is_active) ||
-            (statusFilter ===
-              "INACTIVE" &&
-              !user.is_active);
-
-          const lockDate =
-            user.locked_until
-              ? new Date(
-                  user.locked_until.endsWith("Z")
-                    ? user.locked_until
-                    : `${user.locked_until}Z`
-                )
-              : null;
-
-          const isLocked =
-            lockDate &&
-            lockDate > new Date();
-
-          const matchesSecurity =
-            securityFilter === "ALL" ||
-            (securityFilter ===
-              "LOCKED" &&
-              isLocked) ||
-            (securityFilter ===
-              "UNLOCKED" &&
-              !isLocked);
-
-          return (
-            matchesSearch &&
-            matchesRole &&
-            matchesStatus &&
-            matchesSecurity
-          );
-        }
-      );
-    }, [
-      users,
-      searchText,
-      roleFilter,
-      statusFilter,
-      securityFilter,
-    ]);
+  const filteredUsers = users;
 
   const totalPages = Math.max(
     1,
@@ -1706,21 +1656,19 @@ const importUsersCsv = async (event) => {
             type="text"
             placeholder="Search ID, username, name or email..."
             value={searchText}
-            onChange={(e) =>
-              setSearchText(
-                e.target.value
-              )
-            }
+            onChange={(e) => {
+              setSearchText(e.target.value);
+              setPage(1);
+            }}
           />
 
           <select
             className="users-select"
             value={roleFilter}
-            onChange={(e) =>
-              setRoleFilter(
-                e.target.value
-              )
-            }
+            onChange={(e) => {
+              setRoleFilter(e.target.value);
+              setPage(1);
+            }}
           >
             <option value="ALL">
               All Roles
@@ -1742,11 +1690,10 @@ const importUsersCsv = async (event) => {
           <select
             className="users-select"
             value={statusFilter}
-            onChange={(e) =>
-              setStatusFilter(
-                e.target.value
-              )
-            }
+            onChange={(e) => {
+              setStatusFilter(e.target.value);
+              setPage(1);
+            }}
           >
             <option value="ALL">
               All Statuses
