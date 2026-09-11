@@ -82,32 +82,49 @@ function Login() {
         String(user.role_id)
       );
 
+            // ==============================================
+      // STEP 3: ROLE-BASED REDIRECTION
       // ==============================================
-      // STEP 3: ROLE BASED REDIRECTION
-      // ==============================================
 
-      /*
-  role_id 2 = ADMIN
-  role_id 3 = LIBRARIAN
-  role_id 4 = MEMBER
-*/
+            const roleId = Number(user.role_id);
 
-      if (Number(user.role_id) === 2) {
-  navigate("/dashboard");
+      const roleFromId =
+        roleId === 2
+          ? "ADMIN"
+          : roleId === 3
+            ? "LIBRARIAN"
+            : roleId === 4
+              ? "MEMBER"
+              : "";
 
-} else if (Number(user.role_id) === 3) {
-  navigate("/librarian-dashboard");
+      const role = String(
+        user.role || roleFromId
+      ).toUpperCase();
 
-} else if (Number(user.role_id) === 4) {
-  navigate("/member-dashboard");
+      localStorage.setItem(
+        "role",
+        role
+      );
+
+      if (role === "ADMIN") {
+        navigate("/dashboard");
+
+      } else if (role === "LIBRARIAN") {
+        navigate("/librarian-dashboard");
+
+      } else if (role === "MEMBER") {
+        navigate("/member-dashboard");
 
       } else {
         localStorage.removeItem("token");
         localStorage.removeItem("user");
         localStorage.removeItem("role_id");
+        localStorage.removeItem("role");
 
         setMessage(
-          `Unknown user role: ${user.role_id}`
+          `Unknown user role: ${
+            role || "missing"
+          }`
         );
       }
 

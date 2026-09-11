@@ -64,7 +64,12 @@ def get_my_profile(
         "username": current_user.username,
         "email": current_user.email,
         "full_name": current_user.full_name,
-        "role_id": current_user.role_id
+        "role_id": current_user.role_id,
+        "role": (
+            current_user.role.name
+            if current_user.role
+            else None
+        )
     }
 @router.get("/admin-only")
 def admin_only(
@@ -1377,8 +1382,7 @@ def change_user_role(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="You cannot remove your own ADMIN role"
         )
-
-# Prevent demoting the last active ADMIN
+    # Prevent demoting the last active ADMIN
     if (
         user.role
         and user.role.name == "ADMIN"
@@ -1394,12 +1398,13 @@ def change_user_role(
             .count()
         )
 
-    if user.is_active and active_admin_count <= 1:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Cannot remove the last active ADMIN"
-        )
+        if user.is_active and active_admin_count <= 1:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Cannot remove the last active ADMIN"
+            )
 
+    
     user.role_id = role.id
     db.commit()
     db.refresh(user)
@@ -1499,7 +1504,11 @@ def change_user_status(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_role("ADMIN"))
 ):
-    user = db.query(User).filter(User.id == user_id).first()
+    user = (
+        db.query(User)
+        .filter(User.id == user_id)
+        .first()
+    )
 
     if not user:
         raise HTTPException(
@@ -1507,23 +1516,30 @@ def change_user_status(
             detail="User not found"
         )
 
-    # Prevent an admin from deactivating their own account
-    if user.id == current_user.id and data.is_active is False:
+    # Prevent an administrator from deactivating
+    # their own account.
+    if (
+        user.id == current_user.id
+        and data.is_active is False
+    ):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="You cannot deactivate your own account"
-    )
+        )
 
-# Prevent deactivating the last active ADMIN
+    # Prevent deactivating the last active administrator.
     if (
         user.role
-        and user.role.name == "ADMIN"
+        and user.role.name.upper() == "ADMIN"
         and data.is_active is False
         and user.is_active
     ):
         active_admin_count = (
             db.query(User)
-            .join(Role, User.role_id == Role.id)
+            .join(
+                Role,
+                User.role_id == Role.id
+            )
             .filter(
                 Role.name == "ADMIN",
                 User.is_active == True
@@ -1531,13 +1547,33 @@ def change_user_status(
             .count()
         )
 
-    if active_admin_count <= 1:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Cannot deactivate the last active ADMIN"
-        )
+        if active_admin_count <= 1:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=(
+                    "Cannot deactivate the "
+                    "last active ADMIN"
+                )
+            )
 
     user.is_active = data.is_active
+
+    create_audit_log(
+        db=db,
+        user_id=current_user.id,
+        action=(
+            "USER_ACTIVATED"
+            if user.is_active
+            else "USER_DEACTIVATED"
+        ),
+        entity_type="USER",
+        entity_id=user.id,
+        details=(
+            f"Changed account status for "
+            f"{user.username}"
+        )
+    )
+
     db.commit()
     db.refresh(user)
 
@@ -1550,7 +1586,6 @@ def change_user_status(
         "user_id": user.id,
         "is_active": user.is_active
     }
-
 
 
 
