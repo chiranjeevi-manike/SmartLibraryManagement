@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 from typing import Optional
 
 
@@ -31,7 +31,33 @@ class UserCreate(BaseModel):
     full_name: str
     role_id: int
 
+# =====================================================
+# ADMIN USER CREATE
+# =====================================================
 
+class AdminUserCreate(BaseModel):
+    username: str = Field(
+        min_length=3,
+        max_length=50
+    )
+
+    email: EmailStr
+
+    password: str = Field(
+        min_length=8,
+        max_length=128
+    )
+
+    full_name: str = Field(
+        min_length=2,
+        max_length=100
+    )
+
+    role_name: str = Field(
+        default="MEMBER",
+        min_length=1,
+        max_length=30
+    )
 # =====================================================
 # USER RESPONSE
 # =====================================================
