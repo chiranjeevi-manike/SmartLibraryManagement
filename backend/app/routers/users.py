@@ -45,6 +45,8 @@ from fastapi import (
 import csv
 import io
 
+from sqlalchemy import or_
+
 from email_validator import EmailNotValidError, validate_email
 
 # from app.utils.security import hash_password
