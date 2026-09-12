@@ -169,3 +169,89 @@ def test_audit_csv_protects_against_formulas(
     assert rows[0]["details"].startswith(
         "'="
     )
+
+
+def test_audit_log_global_search(
+    client,
+    db,
+    admin_headers,
+    test_member,
+):
+    create_test_audit_log(
+        db,
+        user_id=test_member.id,
+        action="USER_UPDATED",
+        entity_id=test_member.id,
+        details=(
+            "Unique audit search phrase "
+            "ALPHA-7391"
+        ),
+    )
+
+    create_test_audit_log(
+        db,
+        user_id=test_member.id,
+        action="USER_ROLE_CHANGED",
+        entity_id=test_member.id,
+        details="Unrelated audit record",
+    )
+
+    response = client.get(
+        "/audit-logs/",
+        params={
+            "search": "ALPHA-7391",
+        },
+        headers=admin_headers,
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert data["total"] == 1
+    assert len(data["audit_logs"]) == 1
+    assert (
+        "ALPHA-7391"
+        in data["audit_logs"][0]["details"]
+    )
+
+
+def test_audit_csv_export_applies_global_search(
+    client,
+    db,
+    admin_headers,
+    test_member,
+):
+    create_test_audit_log(
+        db,
+        user_id=test_member.id,
+        action="USER_UPDATED",
+        entity_id=test_member.id,
+        details="CSV-SEARCH-9284",
+    )
+
+    create_test_audit_log(
+        db,
+        user_id=test_member.id,
+        action="USER_UPDATED",
+        entity_id=test_member.id,
+        details="Different CSV audit record",
+    )
+
+    response = client.get(
+        "/audit-logs/export/csv",
+        params={
+            "search": "CSV-SEARCH-9284",
+        },
+        headers=admin_headers,
+    )
+
+    assert response.status_code == 200
+
+    rows = read_csv_response(response)
+
+    assert len(rows) == 1
+    assert (
+        rows[0]["details"]
+        == "CSV-SEARCH-9284"
+    )

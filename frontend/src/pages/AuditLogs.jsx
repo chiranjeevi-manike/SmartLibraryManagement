@@ -26,7 +26,7 @@ const ACTIONS = [
   "LOGIN_FAILED",
   "ACCOUNT_LOCKED",
   "ACCOUNT_UNLOCKED",
-    "USER_CREATED",
+  "USER_CREATED",
   "USER_UPDATED",
   "USER_ROLE_CHANGED",
   "USER_ACTIVATED",
@@ -71,6 +71,8 @@ function AuditLogs() {
   const [skip, setSkip] = useState(0);
   const [limit, setLimit] = useState(20);
 
+  const [search, setSearch] = useState("");
+
   const [action, setAction] = useState("");
   const [entityType, setEntityType] =
     useState("");
@@ -86,6 +88,7 @@ function AuditLogs() {
     appliedFilters,
     setAppliedFilters,
   ] = useState({
+    search: "",
     action: "",
     entityType: "",
     userId: "",
@@ -107,9 +110,8 @@ function AuditLogs() {
 
   const [error, setError] = useState("");
 
-
   const [exporting, setExporting] =
-  useState(false);
+    useState(false);
 
   // ==================================================
   // AUTH
@@ -187,6 +189,10 @@ function AuditLogs() {
           skip: currentSkip,
           limit: currentLimit,
         };
+
+        if (filters.search) {
+          params.search = filters.search;
+        }
 
         if (filters.action) {
           params.action = filters.action;
@@ -266,6 +272,7 @@ function AuditLogs() {
     }
 
     const initialFilters = {
+      search: "",
       action: "",
       entityType: "",
       userId: "",
@@ -306,6 +313,7 @@ function AuditLogs() {
     }
 
     const filters = {
+      search,
       action,
       entityType,
       userId,
@@ -330,6 +338,7 @@ function AuditLogs() {
 
   const handleClearFilters =
     async () => {
+      setSearch("");
       setAction("");
       setEntityType("");
       setUserId("");
@@ -338,6 +347,7 @@ function AuditLogs() {
       setEndDate("");
 
       const filters = {
+        search: "",
         action: "",
         entityType: "",
         userId: "",
@@ -458,6 +468,11 @@ const handleExportCsv = async () => {
     setError("");
 
     const params = {};
+
+    if (appliedFilters.search) {
+      params.search =
+        appliedFilters.search;
+    }
 
     if (appliedFilters.action) {
       params.action =
@@ -1035,6 +1050,26 @@ const handleExportCsv = async () => {
           <div
             style={filterGridStyle}
           >
+            {/* GLOBAL SEARCH */}
+
+            <div>
+              <label style={labelStyle}>
+                Search
+              </label>
+
+              <input
+                type="text"
+                value={search}
+                onChange={(e) =>
+                  setSearch(
+                    e.target.value
+                  )
+                }
+                placeholder="Action, entity, ID or details"
+                style={inputStyle}
+              />
+            </div>
+
             {/* ACTION */}
 
             <div>
