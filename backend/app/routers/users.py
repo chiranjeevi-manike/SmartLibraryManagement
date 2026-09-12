@@ -1293,7 +1293,11 @@ def update_user(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_role("ADMIN"))
 ):
-    user = db.query(User).filter(User.id == user_id).first()
+    user = (
+        db.query(User)
+        .filter(User.id == user_id)
+        .first()
+    )
 
     if not user:
         raise HTTPException(
@@ -1301,34 +1305,75 @@ def update_user(
             detail="User not found"
         )
 
-    if data.username is not None and data.username != user.username:
+    changes = []
+
+    if (
+        data.username is not None
+        and data.username != user.username
+    ):
         duplicate_username = (
             db.query(User)
-            .filter(User.username == data.username, User.id != user_id)
+            .filter(
+                User.username == data.username,
+                User.id != user_id
+            )
             .first()
         )
+
         if duplicate_username:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Username already exists"
             )
+
+        changes.append(
+            f"username: {user.username} -> {data.username}"
+        )
         user.username = data.username
 
-    if data.email is not None and data.email != user.email:
+    if (
+        data.email is not None
+        and data.email != user.email
+    ):
         duplicate_email = (
             db.query(User)
-            .filter(User.email == data.email, User.id != user_id)
+            .filter(
+                User.email == data.email,
+                User.id != user_id
+            )
             .first()
         )
+
         if duplicate_email:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Email already exists"
             )
+
+        changes.append(
+            f"email: {user.email} -> {data.email}"
+        )
         user.email = data.email
 
-    if data.full_name is not None:
+    if (
+        data.full_name is not None
+        and data.full_name != user.full_name
+    ):
+        changes.append(
+            f"full_name: {user.full_name} -> "
+            f"{data.full_name}"
+        )
         user.full_name = data.full_name
+
+    if changes:
+        create_audit_log(
+            db=db,
+            user_id=current_user.id,
+            action="USER_UPDATED",
+            entity_type="USER",
+            entity_id=user.id,
+            details="; ".join(changes)
+        )
 
     db.commit()
     db.refresh(user)
@@ -1341,7 +1386,11 @@ def update_user(
             "email": user.email,
             "full_name": user.full_name,
             "role_id": user.role_id,
-            "role": user.role.name if user.role else None,
+            "role": (
+                user.role.name
+                if user.role
+                else None
+            ),
             "is_active": user.is_active
         }
     }
@@ -1406,7 +1455,11 @@ def change_user_role(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_role("ADMIN"))
 ):
-    user = db.query(User).filter(User.id == user_id).first()
+    user = (
+        db.query(User)
+        .filter(User.id == user_id)
+        .first()
+    )
 
     if not user:
         raise HTTPException(
@@ -1414,7 +1467,11 @@ def change_user_role(
             detail="User not found"
         )
 
-    role = db.query(Role).filter(Role.id == data.role_id).first()
+    role = (
+        db.query(Role)
+        .filter(Role.id == data.role_id)
+        .first()
+    )
 
     if not role:
         raise HTTPException(
@@ -1422,16 +1479,23 @@ def change_user_role(
             detail="Role not found"
         )
 
-    # Prevent removing the current admin's own ADMIN role
-    if user.id == current_user.id and role.name != "ADMIN":
+    previous_role = (
+        user.role.name
+        if user.role
+        else "UNKNOWN"
+    )
+
+    if (
+        user.id == current_user.id
+        and role.name != "ADMIN"
+    ):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="You cannot remove your own ADMIN role"
         )
-    # Prevent demoting the last active ADMIN
+
     if (
-        user.role
-        and user.role.name == "ADMIN"
+        previous_role == "ADMIN"
         and role.name != "ADMIN"
     ):
         active_admin_count = (
@@ -1444,14 +1508,30 @@ def change_user_role(
             .count()
         )
 
-        if user.is_active and active_admin_count <= 1:
+        if (
+            user.is_active
+            and active_admin_count <= 1
+        ):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Cannot remove the last active ADMIN"
             )
 
-    
-    user.role_id = role.id
+    if previous_role != role.name:
+        user.role_id = role.id
+
+        create_audit_log(
+            db=db,
+            user_id=current_user.id,
+            action="USER_ROLE_CHANGED",
+            entity_type="USER",
+            entity_id=user.id,
+            details=(
+                f"Changed role for {user.username}: "
+                f"{previous_role} -> {role.name}"
+            )
+        )
+
     db.commit()
     db.refresh(user)
 
