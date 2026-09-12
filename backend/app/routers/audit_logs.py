@@ -55,6 +55,8 @@ def get_audit_logs(
         le=100,
     ),
 
+    search: Optional[str] = None,
+
     action: Optional[str] = None,
 
     entity_type: Optional[str] = None,
@@ -89,6 +91,41 @@ def get_audit_logs(
         )
 
     query = db.query(AuditLog)
+
+        # -----------------------------------------------------
+    # GLOBAL SEARCH
+    # -----------------------------------------------------
+
+    if search and search.strip():
+        search_value = (
+            f"%{search.strip()}%"
+        )
+
+        query = query.filter(
+            or_(
+                AuditLog.action.ilike(
+                    search_value
+                ),
+                AuditLog.entity_type.ilike(
+                    search_value
+                ),
+                AuditLog.details.ilike(
+                    search_value
+                ),
+                cast(
+                    AuditLog.id,
+                    String
+                ).ilike(search_value),
+                cast(
+                    AuditLog.user_id,
+                    String
+                ).ilike(search_value),
+                cast(
+                    AuditLog.entity_id,
+                    String
+                ).ilike(search_value),
+            )
+        )
 
     # -----------------------------------------------------
     # ACTION FILTER
