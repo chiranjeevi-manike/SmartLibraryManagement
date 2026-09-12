@@ -26,6 +26,11 @@ const ACTIONS = [
   "LOGIN_FAILED",
   "ACCOUNT_LOCKED",
   "ACCOUNT_UNLOCKED",
+    "USER_CREATED",
+  "USER_UPDATED",
+  "USER_ROLE_CHANGED",
+  "USER_ACTIVATED",
+  "USER_DEACTIVATED",
 ];
 
 const ENTITY_TYPES = [
@@ -101,6 +106,10 @@ function AuditLogs() {
   ] = useState(false);
 
   const [error, setError] = useState("");
+
+
+  const [exporting, setExporting] =
+  useState(false);
 
   // ==================================================
   // AUTH
@@ -437,6 +446,112 @@ function AuditLogs() {
       }
     };
 
+
+
+// ==================================================
+// EXPORT AUDIT LOGS CSV
+// ==================================================
+
+const handleExportCsv = async () => {
+  try {
+    setExporting(true);
+    setError("");
+
+    const params = {};
+
+    if (appliedFilters.action) {
+      params.action =
+        appliedFilters.action;
+    }
+
+    if (appliedFilters.entityType) {
+      params.entity_type =
+        appliedFilters.entityType;
+    }
+
+    if (appliedFilters.userId) {
+      params.user_id = Number(
+        appliedFilters.userId
+      );
+    }
+
+    if (appliedFilters.entityId) {
+      params.entity_id = Number(
+        appliedFilters.entityId
+      );
+    }
+
+    if (appliedFilters.startDate) {
+      params.start_date =
+        appliedFilters.startDate;
+    }
+
+    if (appliedFilters.endDate) {
+      params.end_date =
+        appliedFilters.endDate;
+    }
+
+    const response = await axios.get(
+      `${API_URL}/audit-logs/export/csv`,
+      {
+        headers: getHeaders(),
+        params,
+        responseType: "blob",
+      }
+    );
+
+    const disposition =
+      response.headers[
+        "content-disposition"
+      ];
+
+    const filenameMatch =
+      disposition?.match(
+        /filename="?([^"]+)"?/
+      );
+
+    const filename =
+      filenameMatch?.[1] ||
+      "library_audit_logs.csv";
+
+    const downloadUrl =
+      window.URL.createObjectURL(
+        response.data
+      );
+
+    const link =
+      document.createElement("a");
+
+    link.href = downloadUrl;
+    link.download = filename;
+
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+
+    window.URL.revokeObjectURL(
+      downloadUrl
+    );
+  } catch (err) {
+    console.error(
+      "Audit CSV Export Error:",
+      err
+    );
+
+    if (handleAuthError(err)) {
+      return;
+    }
+
+    setError(
+      err.response?.data?.detail ||
+        "Unable to export audit logs."
+    );
+  } finally {
+    setExporting(false);
+  }
+};
+
+
   // ==================================================
   // FORMAT DATE
   // ==================================================
@@ -622,20 +737,48 @@ function AuditLogs() {
           </p>
         </div>
 
-        <button
-          onClick={async () => {
-            await fetchLogs(
-              skip,
-              limit,
-              appliedFilters
-            );
+        <div
+  style={{
+    display: "flex",
+    gap: "10px",
+    alignItems: "center",
+  }}
+>
+  <button
+    type="button"
+    onClick={handleExportCsv}
+    disabled={exporting}
+    style={{
+      ...refreshButtonStyle,
+      color: "#15803d",
+      borderColor: "#22c55e",
+      opacity: exporting ? 0.7 : 1,
+      cursor: exporting
+        ? "not-allowed"
+        : "pointer",
+    }}
+  >
+    {exporting
+      ? "Exporting..."
+      : "Export Audit Logs CSV"}
+  </button>
 
-            await fetchSummary();
-          }}
-          style={refreshButtonStyle}
-        >
-          ↻ Refresh
-        </button>
+  <button
+    type="button"
+    onClick={async () => {
+      await fetchLogs(
+        skip,
+        limit,
+        appliedFilters
+      );
+
+      await fetchSummary();
+    }}
+    style={refreshButtonStyle}
+  >
+    Refresh
+  </button>
+</div>
       </div>
 
       {/* ERROR */}
