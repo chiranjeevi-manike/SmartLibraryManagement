@@ -463,6 +463,11 @@ def get_audit_summary(
 
         "ACCOUNT_LOCKED",
         "ACCOUNT_UNLOCKED",
+                "USER_CREATED",
+        "USER_UPDATED",
+        "USER_ROLE_CHANGED",
+        "USER_ACTIVATED",
+        "USER_DEACTIVATED",
     ]
 
     # -----------------------------------------------------

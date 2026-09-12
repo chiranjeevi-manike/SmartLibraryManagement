@@ -760,25 +760,24 @@ const handleExportCsv = async () => {
               }}
             >
               <button
-                type="button"
-                onClick={handleExportCsv}
-                disabled={exporting}
-                style={{
-                  ...refreshButtonStyle,
-                  color: "#15803d",
-                  borderColor: "#22c55e",
-                  opacity: exporting
-                    ? 0.7
-                    : 1,
-                  cursor: exporting
-                    ? "not-allowed"
-                    : "pointer",
-                }}
-              >
-                {exporting
-                  ? "Exporting..."
-                  : "Export Audit Logs CSV"}
-              </button>
+  type="button"
+  onClick={handleExportCsv}
+  disabled={exporting}
+  style={{
+    ...refreshButtonStyle,
+    backgroundColor: "#16a34a",
+    color: "#ffffff",
+    border: "1pxWing solid #16a34a",
+    opacity: exporting ? 0.7 : 1,
+    cursor: exporting
+      ? "not-allowed"
+      : "pointer",
+  }}
+>
+  {exporting
+    ? "Exporting..."
+    : "Export Audit Logs CSV"}
+</button>
 
               <button
                 type="button"
@@ -997,6 +996,56 @@ const handleExportCsv = async () => {
               }
               icon="✓"
               background="#dcfce7"
+            />
+
+                        <SummaryCard
+              title="Users Created"
+              value={
+                summary.user_created ||
+                0
+              }
+              icon="U+"
+              background="#dcfce7"
+            />
+
+            <SummaryCard
+              title="Users Updated"
+              value={
+                summary.user_updated ||
+                0
+              }
+              icon="U"
+              background="#dbeafe"
+            />
+
+            <SummaryCard
+              title="Roles Changed"
+              value={
+                summary.user_role_changed ||
+                0
+              }
+              icon="R"
+              background="#ede9fe"
+            />
+
+            <SummaryCard
+              title="Users Activated"
+              value={
+                summary.user_activated ||
+                0
+              }
+              icon="A"
+              background="#dcfce7"
+            />
+
+            <SummaryCard
+              title="Users Deactivated"
+              value={
+                summary.user_deactivated ||
+                0
+              }
+              icon="D"
+              background="#fee2e2"
             />
 
 
