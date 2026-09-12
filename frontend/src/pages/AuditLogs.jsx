@@ -737,48 +737,50 @@ const handleExportCsv = async () => {
           </p>
         </div>
 
-        <div
-  style={{
-    display: "flex",
-    gap: "10px",
-    alignItems: "center",
-  }}
->
-  <button
-    type="button"
-    onClick={handleExportCsv}
-    disabled={exporting}
-    style={{
-      ...refreshButtonStyle,
-      color: "#15803d",
-      borderColor: "#22c55e",
-      opacity: exporting ? 0.7 : 1,
-      cursor: exporting
-        ? "not-allowed"
-        : "pointer",
-    }}
-  >
-    {exporting
-      ? "Exporting..."
-      : "Export Audit Logs CSV"}
-  </button>
+                  <div
+              style={{
+                display: "flex",
+                gap: "12px",
+                alignItems: "center",
+              }}
+            >
+              <button
+                type="button"
+                onClick={handleExportCsv}
+                disabled={exporting}
+                style={{
+                  ...refreshButtonStyle,
+                  color: "#15803d",
+                  borderColor: "#22c55e",
+                  opacity: exporting
+                    ? 0.7
+                    : 1,
+                  cursor: exporting
+                    ? "not-allowed"
+                    : "pointer",
+                }}
+              >
+                {exporting
+                  ? "Exporting..."
+                  : "Export Audit Logs CSV"}
+              </button>
 
-  <button
-    type="button"
-    onClick={async () => {
-      await fetchLogs(
-        skip,
-        limit,
-        appliedFilters
-      );
+              <button
+                type="button"
+                onClick={async () => {
+                  await fetchLogs(
+                    skip,
+                    limit,
+                    appliedFilters
+                  );
 
-      await fetchSummary();
-    }}
-    style={refreshButtonStyle}
-  >
-    Refresh
-  </button>
-</div>
+                  await fetchSummary();
+                }}
+                style={refreshButtonStyle}
+              >
+                Refresh
+              </button>
+            </div>
       </div>
 
       {/* ERROR */}
