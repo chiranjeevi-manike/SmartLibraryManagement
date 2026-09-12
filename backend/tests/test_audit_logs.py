@@ -255,3 +255,54 @@ def test_audit_csv_export_applies_global_search(
         rows[0]["details"]
         == "CSV-SEARCH-9284"
     )
+
+
+def test_audit_summary_includes_user_events(
+    client,
+    db,
+    admin_headers,
+    test_member,
+):
+    before_response = client.get(
+        "/audit-logs/summary",
+        headers=admin_headers,
+    )
+
+    assert before_response.status_code == 200
+
+    before = before_response.json()
+
+    actions = [
+        "USER_CREATED",
+        "USER_UPDATED",
+        "USER_ROLE_CHANGED",
+        "USER_ACTIVATED",
+        "USER_DEACTIVATED",
+    ]
+
+    for action in actions:
+        create_test_audit_log(
+            db,
+            user_id=test_member.id,
+            action=action,
+            entity_id=test_member.id,
+            details=f"Test event: {action}",
+        )
+
+    response = client.get(
+        "/audit-logs/summary",
+        headers=admin_headers,
+    )
+
+    assert response.status_code == 200
+
+    summary = response.json()
+
+    for action in actions:
+        key = action.lower()
+
+        assert key in summary
+        assert (
+            summary[key]
+            == before.get(key, 0) + 1
+        )
