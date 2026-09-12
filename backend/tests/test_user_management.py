@@ -1,6 +1,8 @@
 from app.models.role import Role
 from app.models.user import User
 
+from app.models.audit_log import AuditLog
+
 from datetime import datetime, timedelta
 
 from app.utils.security import hash_password
@@ -388,3 +390,80 @@ def test_users_can_be_filtered_by_lock_status(
     assert "locked_filter_test" in usernames
 
 
+
+def test_updating_user_creates_audit_log(
+    client,
+    db,
+    admin_headers,
+    test_member,
+):
+    response = client.put(
+        f"/users/{test_member.id}",
+        json={
+            "full_name": "Updated Member Name",
+        },
+        headers=admin_headers,
+    )
+
+    assert response.status_code == 200
+    assert (
+        response.json()["user"]["full_name"]
+        == "Updated Member Name"
+    )
+
+    audit_log = (
+        db.query(AuditLog)
+        .filter(
+            AuditLog.action == "USER_UPDATED",
+            AuditLog.entity_type == "USER",
+            AuditLog.entity_id == test_member.id,
+        )
+        .order_by(AuditLog.id.desc())
+        .first()
+    )
+
+    assert audit_log is not None
+    assert "full_name:" in audit_log.details
+    assert "Updated Member Name" in audit_log.details
+
+
+def test_changing_user_role_creates_audit_log(
+    client,
+    db,
+    admin_headers,
+    test_member,
+):
+    librarian_role = get_role(
+        db,
+        "LIBRARIAN",
+    )
+
+    response = client.put(
+        f"/users/{test_member.id}/role",
+        json={
+            "role_id": librarian_role.id,
+        },
+        headers=admin_headers,
+    )
+
+    assert response.status_code == 200
+    assert response.json()["role"] == "LIBRARIAN"
+
+    db.refresh(test_member)
+
+    assert test_member.role_id == librarian_role.id
+
+    audit_log = (
+        db.query(AuditLog)
+        .filter(
+            AuditLog.action
+            == "USER_ROLE_CHANGED",
+            AuditLog.entity_type == "USER",
+            AuditLog.entity_id == test_member.id,
+        )
+        .order_by(AuditLog.id.desc())
+        .first()
+    )
+
+    assert audit_log is not None
+    assert "MEMBER -> LIBRARIAN" in audit_log.details
