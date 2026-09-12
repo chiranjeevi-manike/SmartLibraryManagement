@@ -8,6 +8,8 @@ from app.models.book import Book
 from app.models.issue import Issue
 from fastapi import FastAPI
 
+from contextlib import asynccontextmanager
+
 from app.routers import reports
 
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -70,6 +72,18 @@ print("Tables:", Base.metadata.tables.keys())
 Base.metadata.create_all(bind=engine)
 
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    if not scheduler.running:
+        scheduler.start()
+
+    try:
+        yield
+    finally:
+        if scheduler.running:
+            scheduler.shutdown()
+
 # --------------------------------------------------
 # Create FastAPI application
 # --------------------------------------------------
@@ -77,7 +91,11 @@ Base.metadata.create_all(bind=engine)
 app = FastAPI(
     title="Smart Library Management System",
     version="1.0.0",
-    description="Backend API for Smart Library Management System"
+    description=(
+        "Backend API for Smart Library "
+        "Management System"
+    ),
+    lifespan=lifespan,
 )
 
 
@@ -102,16 +120,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-@app.on_event("startup")
-def start_scheduler():
-    if not scheduler.running:
-        scheduler.start()
 
-
-@app.on_event("shutdown")
-def stop_scheduler():
-    if scheduler.running:
-        scheduler.shutdown()
 # --------------------------------------------------
 # Basic routes
 # --------------------------------------------------
