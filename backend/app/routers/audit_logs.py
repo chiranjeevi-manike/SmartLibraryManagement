@@ -9,13 +9,18 @@ from fastapi import (
     status,
 )
 
+from sqlalchemy import String, cast, or_
 from sqlalchemy.orm import Session
+
+from fastapi.responses import StreamingResponse
 
 from app.database import get_db
 from app.models.audit_log import AuditLog
 from app.models.user import User
 from app.utils.dependencies import require_role
 
+import csv
+import io
 
 router = APIRouter(
     prefix="/audit-logs",
@@ -194,6 +199,184 @@ def get_audit_logs(
             for log in logs
         ],
     }
+
+
+
+
+# ---------------------------------------------------------
+# EXPORT AUDIT LOGS CSV
+# ADMIN ONLY
+# ---------------------------------------------------------
+
+@router.get("/export/csv")
+def export_audit_logs_csv(
+    search: Optional[str] = None,
+    action: Optional[str] = None,
+    entity_type: Optional[str] = None,
+    user_id: Optional[int] = None,
+    entity_id: Optional[int] = None,
+    start_date: Optional[date] = None,
+    end_date: Optional[date] = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(
+        require_role("ADMIN")
+    ),
+):
+    if (
+        start_date
+        and end_date
+        and start_date > end_date
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                "start_date cannot be greater "
+                "than end_date"
+            ),
+        )
+
+    query = db.query(AuditLog)
+
+    if search and search.strip():
+        search_value = (
+            f"%{search.strip()}%"
+        )
+
+        query = query.filter(
+            or_(
+                AuditLog.action.ilike(
+                    search_value
+                ),
+                AuditLog.entity_type.ilike(
+                    search_value
+                ),
+                AuditLog.details.ilike(
+                    search_value
+                ),
+                cast(
+                    AuditLog.id,
+                    String
+                ).ilike(search_value),
+                cast(
+                    AuditLog.user_id,
+                    String
+                ).ilike(search_value),
+                cast(
+                    AuditLog.entity_id,
+                    String
+                ).ilike(search_value),
+            )
+        )
+
+    if action:
+        query = query.filter(
+            AuditLog.action
+            == action.strip().upper()
+        )
+
+    if entity_type:
+        query = query.filter(
+            AuditLog.entity_type
+            == entity_type.strip().upper()
+        )
+
+    if user_id is not None:
+        query = query.filter(
+            AuditLog.user_id == user_id
+        )
+
+    if entity_id is not None:
+        query = query.filter(
+            AuditLog.entity_id == entity_id
+        )
+
+    if start_date:
+        query = query.filter(
+            AuditLog.created_at
+            >= datetime.combine(
+                start_date,
+                time.min,
+            )
+        )
+
+    if end_date:
+        query = query.filter(
+            AuditLog.created_at
+            <= datetime.combine(
+                end_date,
+                time.max,
+            )
+        )
+
+    logs = (
+        query
+        .order_by(
+            AuditLog.created_at.desc(),
+            AuditLog.id.desc(),
+        )
+        .all()
+    )
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+
+    writer.writerow([
+        "id",
+        "performed_by_user_id",
+        "action",
+        "entity_type",
+        "entity_id",
+        "details",
+        "created_at",
+    ])
+
+    def safe_value(value):
+        if value is None:
+            return ""
+
+        text_value = str(value)
+
+        if text_value.startswith(
+            ("=", "+", "-", "@")
+        ):
+            return "'" + text_value
+
+        return text_value
+
+    for log in logs:
+        writer.writerow([
+            log.id,
+            log.user_id or "",
+            safe_value(log.action),
+            safe_value(log.entity_type),
+            log.entity_id or "",
+            safe_value(log.details),
+            (
+                log.created_at.isoformat()
+                if log.created_at
+                else ""
+            ),
+        ])
+
+    csv_content = output.getvalue()
+    output.close()
+
+    filename = (
+        "library_audit_logs_"
+        f"{datetime.utcnow():%Y%m%d_%H%M%S}.csv"
+    )
+
+    return StreamingResponse(
+        iter([csv_content]),
+        media_type="text/csv; charset=utf-8",
+        headers={
+            "Content-Disposition":
+                f'attachment; filename="{filename}"'
+        },
+    )
+
+
+
 
 
 # ---------------------------------------------------------
