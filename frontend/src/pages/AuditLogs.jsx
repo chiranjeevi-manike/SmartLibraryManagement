@@ -764,16 +764,15 @@ const handleExportCsv = async () => {
                 onClick={handleExportCsv}
                 disabled={exporting}
                 style={{
-                  ...refreshButtonStyle,
-                  color: "#15803d",
-                  borderColor: "#22c55e",
-                  opacity: exporting
-                    ? 0.7
-                    : 1,
-                  cursor: exporting
-                    ? "not-allowed"
-                    : "pointer",
-                }}
+  ...refreshButtonStyle,
+  backgroundColor: "#16a34a",
+  color: "#ffffff",
+  border: "1px solid #16a34a",
+  opacity: exporting ? 0.7 : 1,
+  cursor: exporting
+    ? "not-allowed"
+    : "pointer",
+}}
               >
                 {exporting
                   ? "Exporting..."
