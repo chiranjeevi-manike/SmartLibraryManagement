@@ -1,6 +1,7 @@
 ﻿from app.time_utils import utc_now
 
-from datetime import datetime, timedelta
+from datetime import timedelta
+import logging
 
 from sqlalchemy.orm import Session
 
@@ -13,6 +14,7 @@ from app.models.reservation import Reservation
 from app.models.notification_delivery_history import (
     NotificationDeliveryHistory,
 )
+logger = logging.getLogger(__name__)
 
 
 def send_tracked_email(
@@ -303,11 +305,12 @@ def send_due_reminder_emails(db: Session):
 
             sent_count += 1
 
-        except Exception as error:
+        except Exception:
             failed_count += 1
-            print(
-                f"Due reminder email failed for "
-                f"user {issue.user_id}: {error}"
+            logger.exception(
+                "due_reminder_email_failed user_id=%s issue_id=%s",
+                issue.user_id,
+                issue.id,
             )
 
     return {
@@ -413,11 +416,12 @@ def send_overdue_emails(db: Session):
 
             sent_count += 1
 
-        except Exception as error:
+        except Exception:
             failed_count += 1
-            print(
-                f"Overdue email failed for "
-                f"user {issue.user_id}: {error}"
+            logger.exception(
+                "overdue_email_failed user_id=%s issue_id=%s",
+                issue.user_id,
+                issue.id,
             )
 
     return {
@@ -524,12 +528,15 @@ def send_reservation_ready_emails(db: Session):
 
             sent_count += 1
 
-        except Exception as error:
+        except Exception:
             failed_count += 1
-
-            print(
-                f"Reservation ready email failed for "
-                f"user {reservation.user_id}: {error}"
+            logger.exception(
+                (
+                    "reservation_ready_email_failed "
+                    "user_id=%s reservation_id=%s"
+                ),
+                reservation.user_id,
+                reservation.id,
             )
 
     return {
