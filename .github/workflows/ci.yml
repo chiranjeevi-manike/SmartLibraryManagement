@@ -69,6 +69,15 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements-dev.txt
 
+      - name: Apply migrations to fresh database
+        working-directory: backend
+        run: alembic upgrade head
+
+      - name: Verify database schema
+        working-directory: backend
+        run: alembic check
+
+      
       - name: Run backend tests
         working-directory: backend
         run: python -m pytest tests -q
