@@ -4,8 +4,12 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from fastapi import FastAPI, HTTPException
 from sqlalchemy import text
 from fastapi.middleware.cors import CORSMiddleware
-
-from app.config import CORS_ORIGINS, DATABASE_NAME
+from starlette.middleware.trustedhost import TrustedHostMiddleware
+from app.config import (
+    CORS_ORIGINS,
+    DATABASE_NAME,
+    TRUSTED_HOSTS,
+)
 from app.database import SessionLocal
 
 # Import models before create_all().
@@ -168,6 +172,26 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.add_middleware(
+    TrustedHostMiddleware,
+    allowed_hosts=TRUSTED_HOSTS,
+)
+
+
+@app.middleware("http")
+async def add_security_headers(request, call_next):
+    response = await call_next(request)
+
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Referrer-Policy"] = (
+        "strict-origin-when-cross-origin"
+    )
+    response.headers["Permissions-Policy"] = (
+        "camera=(), microphone=(), geolocation=()"
+    )
+
+    return response
 
 # --------------------------------------------------
 # Basic routes

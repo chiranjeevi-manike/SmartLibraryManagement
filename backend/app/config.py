@@ -74,3 +74,20 @@ CORS_ORIGINS = [
     ).split(",")
     if origin.strip()
 ]
+
+DEFAULT_TRUSTED_HOSTS = [
+    "localhost",
+    "127.0.0.1",
+    "testserver",
+    "smart-library-backend",
+    "smartlibrarymanagement-production.up.railway.app",
+]
+
+TRUSTED_HOSTS = [
+    host.strip()
+    for host in os.getenv(
+        "TRUSTED_HOSTS",
+        ",".join(DEFAULT_TRUSTED_HOSTS),
+    ).split(",")
+    if host.strip()
+]
