@@ -17,7 +17,11 @@ services:
       - smart_library_pgdata:/var/lib/postgresql/data
 
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d smart_library_db"]
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U postgres -d smart_library_db"
+        ]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -33,7 +37,6 @@ services:
     env_file:
       - ./backend/.env.docker
 
-
     depends_on:
       db:
         condition: service_healthy
@@ -48,6 +51,20 @@ services:
     ports:
       - "8001:8000"
 
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8000/ready', timeout=5)"
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+
   frontend:
     build:
       context: ./frontend
@@ -58,7 +75,8 @@ services:
     restart: unless-stopped
 
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
 
     ports:
       - "8081:80"

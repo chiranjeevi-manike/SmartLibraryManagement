@@ -1,7 +1,8 @@
 from contextlib import asynccontextmanager
 
 from apscheduler.schedulers.background import BackgroundScheduler
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
+from sqlalchemy import text
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import DATABASE_NAME
@@ -203,6 +204,25 @@ def health():
         "version": "1.0.0",
     }
 
+
+@app.get("/ready")
+def readiness():
+    db = SessionLocal()
+
+    try:
+        db.execute(text("SELECT 1"))
+
+        return {
+            "status": "ready",
+            "database": DATABASE_NAME,
+        }
+    except Exception as error:
+        raise HTTPException(
+            status_code=503,
+            detail="Database is unavailable",
+        ) from error
+    finally:
+        db.close()
 
 # --------------------------------------------------
 # Register routers
