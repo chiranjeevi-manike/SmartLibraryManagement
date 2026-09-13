@@ -77,6 +77,9 @@ jobs:
         working-directory: backend
         run: alembic check
 
+      - name: Audit backend dependencies
+        working-directory: backend
+        run: pip-audit -r requirements.txt
       
       - name: Run backend tests
         working-directory: backend
