@@ -1,3 +1,5 @@
+﻿from app.time_utils import utc_now
+
 import csv
 import io
 
@@ -22,9 +24,9 @@ def create_test_issue(
     issue = Issue(
         user_id=test_member.id,
         book_id=test_book.id,
-        issue_date=datetime.utcnow(),
+        issue_date=utc_now(),
         due_date=(
-            datetime.utcnow()
+            utc_now()
             + timedelta(days=14)
         ),
         status="ISSUED",

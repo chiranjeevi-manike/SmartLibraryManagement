@@ -1,3 +1,5 @@
+﻿from app.time_utils import utc_now
+
 from datetime import datetime
 
 from sqlalchemy import (
@@ -52,7 +54,7 @@ class AuditLog(Base):
 
     created_at = Column(
         DateTime,
-        default=datetime.utcnow,
+        default=utc_now,
         nullable=False,
         index=True
     )

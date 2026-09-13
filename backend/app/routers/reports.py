@@ -1,3 +1,5 @@
+﻿from app.time_utils import utc_now
+
 from io import BytesIO
 from fastapi.responses import StreamingResponse
 from fastapi import APIRouter, Depends
@@ -131,7 +133,7 @@ def get_overdue_books_report(
     )
 ):
 
-    now = datetime.utcnow()
+    now = utc_now()
 
     overdue_records = (
         db.query(Issue, User, Book)
@@ -518,7 +520,7 @@ def get_reports_summary(
         db.query(func.count(Issue.id))
         .filter(
             Issue.status == "ISSUED",
-            Issue.due_date < datetime.utcnow()
+            Issue.due_date < utc_now()
         )
         .scalar()
     ) or 0
@@ -602,7 +604,7 @@ def _excel_safe_datetime(value):
 # --------------------------------------------------
 
 def _executive_report_data(db: Session):
-    now = datetime.utcnow()
+    now = utc_now()
 
     total_members = (
         db.query(func.count(User.id))
@@ -1727,4 +1729,3 @@ def export_report_excel(
                 f'attachment; filename="{filename}"'
         },
     )
-

@@ -1,3 +1,5 @@
+﻿from app.time_utils import utc_now
+
 from app.models.reservation import Reservation
 from app.models.user import User
 from app.models.role import Role
@@ -379,14 +381,14 @@ def test_reservation_queue_is_fifo(
         user_id=member1.id,
         book_id=test_book.id,
         status="ACTIVE",
-        reserved_at=datetime.utcnow() - timedelta(minutes=10),
+        reserved_at=utc_now() - timedelta(minutes=10),
     )
 
     second_reservation = Reservation(
         user_id=member2.id,
         book_id=test_book.id,
         status="ACTIVE",
-        reserved_at=datetime.utcnow(),
+        reserved_at=utc_now(),
     )
 
     db.add_all([
@@ -461,14 +463,14 @@ def test_second_reservation_cannot_be_fulfilled_before_first(
         user_id=member1.id,
         book_id=test_book.id,
         status="ACTIVE",
-        reserved_at=datetime.utcnow() - timedelta(minutes=10),
+        reserved_at=utc_now() - timedelta(minutes=10),
     )
 
     second_reservation = Reservation(
         user_id=member2.id,
         book_id=test_book.id,
         status="ACTIVE",
-        reserved_at=datetime.utcnow(),
+        reserved_at=utc_now(),
     )
 
     db.add_all([
@@ -532,14 +534,14 @@ def test_first_reservation_can_be_fulfilled_when_copy_available(
         user_id=member1.id,
         book_id=test_book.id,
         status="ACTIVE",
-        reserved_at=datetime.utcnow() - timedelta(minutes=10),
+        reserved_at=utc_now() - timedelta(minutes=10),
     )
 
     second_reservation = Reservation(
         user_id=member2.id,
         book_id=test_book.id,
         status="ACTIVE",
-        reserved_at=datetime.utcnow(),
+        reserved_at=utc_now(),
     )
 
     db.add_all([

@@ -1,3 +1,5 @@
+﻿from app.time_utils import utc_now
+
 from datetime import datetime
 
 from sqlalchemy import (
@@ -51,14 +53,14 @@ class BookRating(Base):
 
     created_at = Column(
         DateTime,
-        default=datetime.utcnow,
+        default=utc_now,
         nullable=False
     )
 
     updated_at = Column(
         DateTime,
-        default=datetime.utcnow,
-        onupdate=datetime.utcnow,
+        default=utc_now,
+        onupdate=utc_now,
         nullable=False
     )
 

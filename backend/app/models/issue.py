@@ -1,3 +1,5 @@
+﻿from app.time_utils import utc_now
+
 from sqlalchemy import (
     Column,
     Integer,
@@ -32,7 +34,7 @@ class Issue(Base):
 
     issue_date = Column(
         DateTime,
-        default=datetime.utcnow,
+        default=utc_now,
         nullable=False
     )
 

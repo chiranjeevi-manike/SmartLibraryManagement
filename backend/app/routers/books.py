@@ -1,3 +1,5 @@
+﻿from app.time_utils import utc_now
+
 from fastapi import (
     APIRouter,
     Depends,
@@ -661,7 +663,7 @@ def export_books_csv(
 
     filename = (
         "library_books_"
-        f"{datetime.utcnow():%Y%m%d_%H%M%S}.csv"
+        f"{utc_now():%Y%m%d_%H%M%S}.csv"
     )
 
     return StreamingResponse(

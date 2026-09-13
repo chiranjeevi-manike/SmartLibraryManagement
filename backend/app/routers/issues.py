@@ -1,3 +1,5 @@
+﻿from app.time_utils import utc_now
+
 from fastapi import (
     APIRouter,
     Depends,
@@ -227,7 +229,7 @@ def export_issues_csv(
 
     filename = (
         "library_issues_"
-        f"{datetime.utcnow():%Y%m%d_%H%M%S}.csv"
+        f"{utc_now():%Y%m%d_%H%M%S}.csv"
     )
 
     return StreamingResponse(
@@ -420,7 +422,7 @@ def return_book(
             fine_notification = Notification(
                 user_id=issue.user_id,
                 message=(
-                    f"A fine of ₹{float(issue.fine_amount):.2f} "
+                    f"A fine of â‚¹{float(issue.fine_amount):.2f} "
                     f"has been generated for Book ID {issue.book_id}. "
                     f"Overdue days: {issue.overdue_days}. "
                     f"Issue ID {issue.id}"
@@ -455,7 +457,7 @@ def return_book(
             next_reservation.status = "READY"
 
             next_reservation.ready_until = (
-                datetime.utcnow()
+                utc_now()
                 + timedelta(days=2)
             )
 
@@ -937,7 +939,7 @@ def export_fines_csv(
 
     filename = (
         "library_fines_"
-        f"{datetime.utcnow():%Y%m%d_%H%M%S}.csv"
+        f"{utc_now():%Y%m%d_%H%M%S}.csv"
     )
 
     return StreamingResponse(
@@ -1066,7 +1068,7 @@ def pay_fine(
 
     # Update fine payment
     issue.fine_status = "PAID"
-    issue.fine_paid_at = datetime.utcnow()
+    issue.fine_paid_at = utc_now()
 
 
     fine_payment = FinePayment(
@@ -1085,7 +1087,7 @@ def pay_fine(
     payment_notification = Notification(
         user_id=issue.user_id,
         message=(
-            f"Your fine of ₹{float(issue.fine_amount):.2f} "
+            f"Your fine of â‚¹{float(issue.fine_amount):.2f} "
             f"for Book ID {issue.book_id} "
             f"has been successfully paid. "
             f"Issue ID {issue.id}"
@@ -1107,7 +1109,7 @@ def pay_fine(
         entity_type="ISSUE",
         entity_id=issue.id,
         details=(
-            f"Fine of ₹{float(issue.fine_amount):.2f} "
+            f"Fine of â‚¹{float(issue.fine_amount):.2f} "
             f"paid for Issue ID {issue.id}, "
             f"Book ID {issue.book_id}, "
             f"User ID {issue.user_id}"
@@ -1173,7 +1175,7 @@ def get_my_borrowing_summary(
     )
 
     # Currently overdue books
-    now = datetime.utcnow()
+    now = utc_now()
 
     overdue_books = (
         db.query(Issue)

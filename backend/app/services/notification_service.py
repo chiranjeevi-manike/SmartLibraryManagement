@@ -1,3 +1,5 @@
+﻿from app.time_utils import utc_now
+
 from datetime import datetime, timedelta
 
 from sqlalchemy.orm import Session
@@ -64,7 +66,7 @@ def send_tracked_email(
 
 def generate_due_reminders(db: Session):
 
-    now = datetime.utcnow()
+    now = utc_now()
     reminder_limit = now + timedelta(days=2)
 
     upcoming_issues = (
@@ -133,7 +135,7 @@ def generate_due_reminders(db: Session):
 
 def generate_overdue_notifications(db: Session):
 
-    now = datetime.utcnow()
+    now = utc_now()
 
     overdue_issues = (
         db.query(Issue)
@@ -205,7 +207,7 @@ def generate_overdue_notifications(db: Session):
 
 def send_due_reminder_emails(db: Session):
 
-    now = datetime.utcnow()
+    now = utc_now()
     reminder_limit = now + timedelta(days=2)
 
     upcoming_issues = (
@@ -316,7 +318,7 @@ def send_due_reminder_emails(db: Session):
 
 def send_overdue_emails(db: Session):
 
-    now = datetime.utcnow()
+    now = utc_now()
 
     overdue_issues = (
         db.query(Issue)

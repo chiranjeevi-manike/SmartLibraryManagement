@@ -1,3 +1,5 @@
+﻿from app.time_utils import utc_now
+
 
 from app.models.reservation import Reservation
 from sqlalchemy.orm import Session
@@ -65,7 +67,7 @@ def create_issue(
 
     if role_name == "MEMBER":
 
-        now = datetime.utcnow()
+        now = utc_now()
 
         overdue_issue = (
             db.query(Issue)
@@ -197,7 +199,7 @@ def create_issue(
     # 10. Create issue
     # --------------------------------------------------
 
-    issue_date = datetime.utcnow()
+    issue_date = utc_now()
 
     due_date = issue_date + timedelta(days=14)
 
@@ -299,7 +301,7 @@ def return_book(
                 "Physical copy does not belong to the issued book"
             )
 
-    return_date = datetime.utcnow()
+    return_date = utc_now()
 
     if return_date > issue.due_date:
         overdue_days = (
@@ -348,7 +350,7 @@ def get_active_issues(db: Session):
 
 
 def get_overdue_issues(db: Session):
-    now = datetime.utcnow()
+    now = utc_now()
 
     return (
         db.query(Issue)
@@ -364,7 +366,7 @@ def calculate_current_fine(issue: Issue):
     if issue.status != "ISSUED":
         return issue.overdue_days, issue.fine_amount
 
-    now = datetime.utcnow()
+    now = utc_now()
 
     if now > issue.due_date:
         overdue_days = (
@@ -418,7 +420,7 @@ def renew_issue(
             "Book cannot be renewed because another member has reserved it"
         )
 
-    now = datetime.utcnow()
+    now = utc_now()
 
     if now > issue.due_date:
         raise ValueError(

@@ -1,3 +1,5 @@
+﻿from app.time_utils import utc_now
+
 from datetime import datetime, timedelta
 
 from app.models.issue import Issue
@@ -16,8 +18,8 @@ def test_due_reminder_email_sent_once(
     issue = Issue(
         user_id=test_member.id,
         book_id=test_book.id,
-        issue_date=datetime.utcnow(),
-        due_date=datetime.utcnow() + timedelta(days=1),
+        issue_date=utc_now(),
+        due_date=utc_now() + timedelta(days=1),
         status="ISSUED",
         fine_amount=0,
         fine_status="UNPAID",
@@ -73,8 +75,8 @@ def test_overdue_email_sent_once(
     issue = Issue(
         user_id=test_member.id,
         book_id=test_book.id,
-        issue_date=datetime.utcnow() - timedelta(days=10),
-        due_date=datetime.utcnow() - timedelta(days=3),
+        issue_date=utc_now() - timedelta(days=10),
+        due_date=utc_now() - timedelta(days=3),
         status="ISSUED",
         fine_amount=0,
         fine_status="UNPAID",
@@ -134,8 +136,8 @@ def test_reservation_ready_email_sent_once(
         user_id=test_member.id,
         book_id=test_book.id,
         status="READY",
-        reserved_at=datetime.utcnow(),
-        ready_until=datetime.utcnow() + timedelta(days=2),
+        reserved_at=utc_now(),
+        ready_until=utc_now() + timedelta(days=2),
     )
 
     db.add(reservation)
