@@ -2,10 +2,11 @@ from datetime import datetime, timedelta, timezone
 
 from jose import jwt, JWTError
 
-from app.config import SECRET_KEY, ALGORITHM
-
-
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+from app.config import (
+    ACCESS_TOKEN_EXPIRE_MINUTES,
+    ALGORITHM,
+    SECRET_KEY,
+)
 
 
 # =====================================================

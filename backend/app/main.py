@@ -5,7 +5,7 @@ from fastapi import FastAPI, HTTPException
 from sqlalchemy import text
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.config import DATABASE_NAME
+from app.config import CORS_ORIGINS, DATABASE_NAME
 from app.database import SessionLocal
 
 # Import models before create_all().
@@ -162,20 +162,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-        "http://localhost:4173",
-        "http://localhost:4174",
-        "http://127.0.0.1:4173",
-        "http://127.0.0.1:4174",
-        "http://localhost:8081",
-        "http://127.0.0.1:8081",
-        (
-            "https://reasonable-growth-production-a6c1."
-            "up.railway.app"
-        ),
-    ],
+    allow_origins=CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
