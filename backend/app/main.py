@@ -1,18 +1,16 @@
+import logging
 from contextlib import asynccontextmanager
 
 from apscheduler.schedulers.background import BackgroundScheduler
 from fastapi import FastAPI, HTTPException
-from sqlalchemy import text
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import text
 from starlette.middleware.trustedhost import TrustedHostMiddleware
-from app.config import (
-    CORS_ORIGINS,
-    DATABASE_NAME,
-    TRUSTED_HOSTS,
-)
+
+from app.config import CORS_ORIGINS, DATABASE_NAME, TRUSTED_HOSTS
 from app.database import SessionLocal
 
-# Import models before create_all().
+# Import models so SQLAlchemy metadata is complete.
 from app.models.audit_log import AuditLog
 from app.models.author import Author
 from app.models.book import Book
@@ -42,7 +40,6 @@ from app.routers.issues import router as issues_router
 from app.routers.notifications import router as notifications_router
 from app.routers.reservations import router as reservations_router
 from app.routers.users import router as users_router
-
 from app.services.notification_service import (
     generate_due_reminders,
     generate_overdue_notifications,
@@ -54,6 +51,7 @@ from app.services.reservation_service import (
     process_expired_ready_reservations,
 )
 
+logger = logging.getLogger(__name__)
 
 
 # --------------------------------------------------
@@ -65,10 +63,13 @@ def run_reservation_expiry_job():
 
     try:
         result = process_expired_ready_reservations(db)
-        print("Reservation expiry job:", result)
-    except Exception as error:
+        logger.info(
+            "reservation_expiry_job_completed result=%s",
+            result,
+        )
+    except Exception:
         db.rollback()
-        print("Reservation expiry job failed:", error)
+        logger.exception("reservation_expiry_job_failed")
     finally:
         db.close()
 
@@ -85,32 +86,30 @@ def run_notification_job():
 
         db.commit()
 
-        print(
-            "Notification job:",
-            {
-                "due_reminders": due_result["created_count"],
-                "overdue_notifications": (
-                    overdue_result["created_count"]
-                ),
-                "due_emails_sent": email_result["sent_count"],
-                "due_emails_failed": email_result["failed_count"],
-                "overdue_emails_sent": (
-                    overdue_email_result["sent_count"]
-                ),
-                "overdue_emails_failed": (
-                    overdue_email_result["failed_count"]
-                ),
-                "reservation_ready_emails_sent": (
-                    reservation_email_result["sent_count"]
-                ),
-                "reservation_ready_emails_failed": (
-                    reservation_email_result["failed_count"]
-                ),
-            },
+        logger.info(
+            (
+                "notification_job_completed "
+                "due_reminders=%s "
+                "overdue_notifications=%s "
+                "due_emails_sent=%s "
+                "due_emails_failed=%s "
+                "overdue_emails_sent=%s "
+                "overdue_emails_failed=%s "
+                "reservation_ready_emails_sent=%s "
+                "reservation_ready_emails_failed=%s"
+            ),
+            due_result["created_count"],
+            overdue_result["created_count"],
+            email_result["sent_count"],
+            email_result["failed_count"],
+            overdue_email_result["sent_count"],
+            overdue_email_result["failed_count"],
+            reservation_email_result["sent_count"],
+            reservation_email_result["failed_count"],
         )
-    except Exception as error:
+    except Exception:
         db.rollback()
-        print("Notification job failed:", error)
+        logger.exception("notification_job_failed")
     finally:
         db.close()
 
@@ -157,12 +156,9 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="Smart Library Management System",
     version="1.0.0",
-    description=(
-        "Backend API for Smart Library Management System"
-    ),
+    description="Backend API for Smart Library Management System",
     lifespan=lifespan,
 )
-
 
 app.add_middleware(
     CORSMiddleware,
@@ -193,6 +189,7 @@ async def add_security_headers(request, call_next):
 
     return response
 
+
 # --------------------------------------------------
 # Basic routes
 # --------------------------------------------------
@@ -200,9 +197,7 @@ async def add_security_headers(request, call_next):
 @app.get("/")
 def home():
     return {
-        "message": (
-            "Welcome to Smart Library Management System!"
-        ),
+        "message": "Welcome to Smart Library Management System!",
         "database": DATABASE_NAME,
     }
 
@@ -222,18 +217,19 @@ def readiness():
 
     try:
         db.execute(text("SELECT 1"))
-
         return {
             "status": "ready",
             "database": DATABASE_NAME,
         }
     except Exception as error:
+        logger.exception("readiness_check_failed")
         raise HTTPException(
             status_code=503,
             detail="Database is unavailable",
         ) from error
     finally:
         db.close()
+
 
 # --------------------------------------------------
 # Register routers
