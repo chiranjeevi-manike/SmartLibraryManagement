@@ -1,3 +1,5 @@
+﻿from app.time_utils import utc_now
+
 from datetime import datetime, timedelta
 
 from sqlalchemy.orm import Session
@@ -8,7 +10,7 @@ from app.models.notification import Notification
 
 def process_expired_ready_reservations(db: Session):
 
-    now = datetime.utcnow()
+    now = utc_now()
 
     expired_reservations = (
         db.query(Reservation)

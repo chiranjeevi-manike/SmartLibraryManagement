@@ -1,3 +1,5 @@
+﻿from app.time_utils import utc_now
+
 import csv
 import io
 
@@ -33,19 +35,19 @@ def create_paid_fine(
         user_id=test_member.id,
         book_id=test_book.id,
         issue_date=(
-            datetime.utcnow()
+            utc_now()
             - timedelta(days=30)
         ),
         due_date=(
-            datetime.utcnow()
+            utc_now()
             - timedelta(days=16)
         ),
-        return_date=datetime.utcnow(),
+        return_date=utc_now(),
         status="RETURNED",
         overdue_days=16,
         fine_amount=80,
         fine_status="PAID",
-        fine_paid_at=datetime.utcnow(),
+        fine_paid_at=utc_now(),
         renewal_count=0,
     )
 

@@ -1,3 +1,5 @@
+﻿from app.time_utils import utc_now
+
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from datetime import datetime
@@ -24,7 +26,7 @@ def dashboard_summary(
         require_roles("ADMIN", "LIBRARIAN")
     )
 ):
-    now = datetime.utcnow()
+    now = utc_now()
 
     total_books = db.query(Book).filter(
         Book.is_active == True

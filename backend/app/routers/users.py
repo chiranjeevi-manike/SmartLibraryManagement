@@ -1,3 +1,5 @@
+﻿from app.time_utils import utc_now
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
@@ -466,7 +468,7 @@ def get_my_dashboard(
         .all()
     )
 
-    now = datetime.utcnow()
+    now = utc_now()
 
     overdue_issues = (
         db.query(Issue)
@@ -650,7 +652,7 @@ def get_library_dashboard(
     )
 
     # Overdue issued books
-    now = datetime.utcnow()
+    now = utc_now()
 
     overdue_books = (
         db.query(Issue)
@@ -876,7 +878,7 @@ def get_librarian_dashboard(
         require_roles("ADMIN", "LIBRARIAN")
     )
 ):
-    now = datetime.utcnow()
+    now = utc_now()
 
     # ---------------------------------------------
     # Book statistics
@@ -982,7 +984,7 @@ def get_admin_dashboard(
         require_roles("ADMIN")
     )
 ):
-    now = datetime.utcnow()
+    now = utc_now()
 
     # --------------------------------------------------
     # User statistics
@@ -1266,7 +1268,7 @@ def export_users_csv(
 
     filename = (
         "library_users_"
-        f"{datetime.utcnow():%Y%m%d_%H%M%S}.csv"
+        f"{utc_now():%Y%m%d_%H%M%S}.csv"
     )
 
     headers = {

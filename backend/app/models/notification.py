@@ -1,3 +1,5 @@
+﻿from app.time_utils import utc_now
+
 from sqlalchemy import (
     Column,
     Integer,
@@ -46,6 +48,6 @@ class Notification(Base):
 
     created_at = Column(
         DateTime,
-        default=datetime.utcnow,
+        default=utc_now,
         nullable=False
     )

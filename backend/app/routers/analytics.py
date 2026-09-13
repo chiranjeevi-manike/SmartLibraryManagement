@@ -1,3 +1,5 @@
+﻿from app.time_utils import utc_now
+
 from datetime import datetime, timedelta
 
 from fastapi import APIRouter, Depends
@@ -98,7 +100,7 @@ def get_analytics_dashboard(
     # OVERDUE BOOKS
     # --------------------------------------------------
 
-    now = datetime.utcnow()
+    now = utc_now()
 
     overdue_books = (
         db.query(Issue)
@@ -455,7 +457,7 @@ def get_monthly_trends(
     if months > 24:
         months = 24
 
-    now = datetime.utcnow()
+    now = utc_now()
 
     # --------------------------------------------------
     # GENERATE MONTH LIST
@@ -570,7 +572,7 @@ def get_security_dashboard(
     if recent_limit > 50:
         recent_limit = 50
 
-    now = datetime.utcnow()
+    now = utc_now()
 
     security_actions = [
         "LOGIN_SUCCESS",
@@ -722,7 +724,7 @@ def get_library_activity(
     if recent_limit > 50:
         recent_limit = 50
 
-    now = datetime.utcnow()
+    now = utc_now()
 
     today_start = datetime(
         now.year,
@@ -922,7 +924,7 @@ def get_due_monitoring(
     )
 ):
 
-    now = datetime.utcnow()
+    now = utc_now()
 
     today_start = datetime(
         now.year,
@@ -1440,7 +1442,7 @@ def get_member_risk_monitoring(
         require_role("ADMIN")
     )
 ):
-    now = datetime.utcnow()
+    now = utc_now()
     borrowing_limit = 3
 
     members = (
@@ -1699,7 +1701,7 @@ def get_system_health(
         require_role("ADMIN")
     )
 ):
-    now = datetime.utcnow()
+    now = utc_now()
 
     # --------------------------------------------------
     # USER / ACCOUNT HEALTH
@@ -2127,7 +2129,7 @@ def get_reservation_demand_monitoring(
         require_role("ADMIN")
     )
 ):
-    now = datetime.utcnow()
+    now = utc_now()
     expiring_soon_until = now + timedelta(hours=24)
 
     # --------------------------------------------------
@@ -2594,7 +2596,7 @@ def get_fine_monitoring(
     if recent_limit > 50:
         recent_limit = 50
 
-    now = datetime.utcnow()
+    now = utc_now()
 
     # --------------------------------------------------
     # OVERALL FINE SUMMARY
@@ -3054,7 +3056,7 @@ def get_circulation_monitoring(
     if limit > 50:
         limit = 50
 
-    now = datetime.utcnow()
+    now = utc_now()
 
     total_issues = db.query(Issue).count()
 
@@ -3463,7 +3465,7 @@ def get_collection_development_monitoring(
     if limit > 100:
         limit = 100
 
-    now = datetime.utcnow()
+    now = utc_now()
 
     # Build a month-aligned lookback without introducing an
     # additional date library dependency.
@@ -3868,7 +3870,7 @@ def get_executive_dashboard(
         require_role("ADMIN")
     )
 ):
-    now = datetime.utcnow()
+    now = utc_now()
 
     # --------------------------------------------------
     # MEMBERS
@@ -4554,7 +4556,7 @@ def get_executive_dashboard(
                 "priority": "MEDIUM",
                 "area": "FINES",
                 "message":
-                    f"₹{outstanding_fines:.2f} in fines remains outstanding.",
+                    f"â‚¹{outstanding_fines:.2f} in fines remains outstanding.",
             }
         )
 
@@ -4705,4 +4707,3 @@ def get_executive_dashboard(
                 data_consistency_issues,
         },
     }
-

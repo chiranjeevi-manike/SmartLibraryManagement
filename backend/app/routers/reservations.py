@@ -1,3 +1,5 @@
+﻿from app.time_utils import utc_now
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
@@ -240,7 +242,7 @@ def export_reservations_csv(
 
     filename = (
         "library_reservations_"
-        f"{datetime.utcnow():%Y%m%d_%H%M%S}.csv"
+        f"{utc_now():%Y%m%d_%H%M%S}.csv"
     )
 
     return StreamingResponse(
@@ -727,4 +729,3 @@ def get_next_reservation(
         "reserved_at": next_reservation.reserved_at,
         "status": next_reservation.status
     }
-

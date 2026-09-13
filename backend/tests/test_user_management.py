@@ -1,3 +1,5 @@
+﻿from app.time_utils import utc_now
+
 from app.models.role import Role
 from app.models.user import User
 
@@ -363,7 +365,7 @@ def test_users_can_be_filtered_by_lock_status(
         is_active=True,
         failed_login_attempts=5,
         locked_until=(
-            datetime.utcnow()
+            utc_now()
             + timedelta(minutes=30)
         ),
     )

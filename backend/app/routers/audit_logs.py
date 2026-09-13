@@ -1,3 +1,5 @@
+﻿from app.time_utils import utc_now
+
 from datetime import date, datetime, time
 from typing import Optional
 
@@ -400,7 +402,7 @@ def export_audit_logs_csv(
 
     filename = (
         "library_audit_logs_"
-        f"{datetime.utcnow():%Y%m%d_%H%M%S}.csv"
+        f"{utc_now():%Y%m%d_%H%M%S}.csv"
     )
 
     return StreamingResponse(

@@ -1,3 +1,5 @@
+﻿from app.time_utils import utc_now
+
 from datetime import datetime, timedelta
 
 from app.models.issue import Issue
@@ -72,11 +74,11 @@ def test_fine_payment_creates_history(
         user_id=test_member.id,
         book_id=test_book.id,
         book_copy_id=test_book_copies[0].id,
-        issue_date=datetime.utcnow()
+        issue_date=utc_now()
         - timedelta(days=30),
-        due_date=datetime.utcnow()
+        due_date=utc_now()
         - timedelta(days=16),
-        return_date=datetime.utcnow()
+        return_date=utc_now()
         - timedelta(days=10),
         status="RETURNED",
         overdue_days=6,
