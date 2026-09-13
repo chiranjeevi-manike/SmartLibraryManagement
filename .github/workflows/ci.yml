@@ -75,7 +75,7 @@ jobs:
 
       - name: Verify database schema
         working-directory: backend
-        run: alembic check check
+        run: alembic check
 
       
       - name: Run backend tests
