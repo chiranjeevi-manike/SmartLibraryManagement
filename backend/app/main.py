@@ -5,7 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import DATABASE_NAME
-from app.database import Base, SessionLocal, engine
+from app.database import SessionLocal
 
 # Import models before create_all().
 from app.models.audit_log import AuditLog
@@ -49,15 +49,6 @@ from app.services.reservation_service import (
     process_expired_ready_reservations,
 )
 
-
-# --------------------------------------------------
-# Create database tables
-# --------------------------------------------------
-
-# Keep create_all() until the empty baseline migration is
-# replaced by a complete, tested initial-schema migration.
-print("Tables:", Base.metadata.tables.keys())
-Base.metadata.create_all(bind=engine)
 
 
 # --------------------------------------------------
