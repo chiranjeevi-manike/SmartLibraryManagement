@@ -11,6 +11,8 @@ const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL ||
   "http://localhost:8001";
 
+const PAGE_SIZE = 100;
+
 function Books() {
   // ==================================================
   // STATE
@@ -23,6 +25,8 @@ function Books() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [totalBooks, setTotalBooks] = useState(0);
 
   const [importing, setImporting] =
   useState(false);
@@ -121,7 +125,12 @@ function Books() {
   // FETCH BOOKS
   // ==================================================
 
-  const fetchBooks = async () => {
+  const fetchBooks = async (
+    pageNumber = page,
+    searchValue = search
+  ) => {
+    setLoading(true);
+
     try {
       if (!getToken()) {
         navigate("/");
@@ -131,6 +140,13 @@ function Books() {
       const response = await axios.get(
         `${API_BASE_URL}/books/`,
         {
+          params: {
+            skip: (pageNumber - 1) * PAGE_SIZE,
+            limit: PAGE_SIZE,
+            sort_by: "title",
+            search:
+              searchValue.trim() || undefined,
+          },
           headers: getHeaders(),
         }
       );
@@ -154,6 +170,9 @@ function Books() {
       }
 
       setBooks(data);
+      setTotalBooks(
+        Number(response.data?.total ?? data.length)
+      );
     } catch (error) {
       console.error("Books API Error:", error);
 
@@ -165,6 +184,8 @@ function Books() {
         error.response?.data?.detail ||
           "Unable to load books."
       );
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -249,27 +270,38 @@ function Books() {
   };
 
   // ==================================================
-  // INITIAL LOAD
+  // INITIAL SUPPORTING DATA
   // ==================================================
 
   useEffect(() => {
     const loadData = async () => {
-      setLoading(true);
       setError("");
 
       await Promise.all([
-        fetchBooks(),
         fetchAuthors(),
         fetchCategories(),
       ]);
-
-      setLoading(false);
     };
 
     loadData();
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // ==================================================
+  // PAGINATED BOOK LOAD / DEBOUNCED SEARCH
+  // ==================================================
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setError("");
+      fetchBooks(page, search);
+    }, 300);
+
+    return () => window.clearTimeout(timer);
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, search]);
 
   // ==================================================
   // FORM CHANGE
@@ -315,15 +347,15 @@ const downloadCsvTemplate = () => {
     [
       "isbn",
       "title",
-      "author_id",
-      "category_id",
+      "author_name",
+      "category_name",
       "total_copies",
     ].join(","),
     [
       "9780000000001",
       "Sample Book",
-      "1",
-      "1",
+      "Sample Author",
+      "Computer Science",
       "5",
     ].join(","),
   ].join("\n");
@@ -443,8 +475,12 @@ const importBooksCsv = async (event) => {
     );
 
     setImportResult(response.data);
-
-    await fetchBooks();
+    setPage(1);
+    await Promise.all([
+      fetchBooks(1, search),
+      fetchAuthors(),
+      fetchCategories(),
+    ]);
 
   } catch (error) {
     console.error(
@@ -664,27 +700,6 @@ const importBooksCsv = async (event) => {
   };
 
   // ==================================================
-  // FILTER
-  // ==================================================
-
-  const filteredBooks = books.filter(
-    (book) => {
-      const searchText = search
-        .trim()
-        .toLowerCase();
-
-      return (
-        book.title
-          ?.toLowerCase()
-          .includes(searchText) ||
-        book.isbn
-          ?.toLowerCase()
-          .includes(searchText)
-      );
-    }
-  );
-
-  // ==================================================
   // SUMMARY
   // ==================================================
 
@@ -705,6 +720,11 @@ const importBooksCsv = async (event) => {
     (book) =>
       Number(book.available_copies) === 0
   ).length;
+
+  const totalPages = Math.max(
+    1,
+    Math.ceil(totalBooks / PAGE_SIZE)
+  );
 
   // ==================================================
   // LOADING
@@ -897,27 +917,27 @@ const importBooksCsv = async (event) => {
       <div style={summaryGridStyle}>
         <SummaryCard
           title="Book Titles"
-          value={books.length}
+          value={totalBooks}
           icon="📚"
           background="#dbeafe"
         />
 
         <SummaryCard
-          title="Total Copies"
+          title="Copies on Page"
           value={totalCopies}
           icon="▤"
           background="#ede9fe"
         />
 
         <SummaryCard
-          title="Available Copies"
+          title="Available on Page"
           value={availableCopies}
           icon="✓"
           background="#dcfce7"
         />
 
         <SummaryCard
-          title="Unavailable Titles"
+          title="Unavailable on Page"
           value={unavailableTitles}
           icon="!"
           background="#fee2e2"
@@ -1106,7 +1126,7 @@ const importBooksCsv = async (event) => {
           </div>
 
           <span style={countBadgeStyle}>
-            {filteredBooks.length} book(s)
+            {totalBooks} book(s)
           </span>
         </div>
 
@@ -1122,9 +1142,10 @@ const importBooksCsv = async (event) => {
               type="text"
               placeholder="Search by title or ISBN..."
               value={search}
-              onChange={(e) =>
-                setSearch(e.target.value)
-              }
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(1);
+              }}
               style={searchInputStyle}
             />
           </div>
@@ -1162,7 +1183,7 @@ const importBooksCsv = async (event) => {
             </thead>
 
             <tbody>
-              {filteredBooks.length === 0 ? (
+              {books.length === 0 ? (
                 <tr>
                   <td
                     colSpan={
@@ -1174,7 +1195,7 @@ const importBooksCsv = async (event) => {
                   </td>
                 </tr>
               ) : (
-                filteredBooks.map((book) => (
+                books.map((book) => (
                   <tr
                     key={book.id}
                     style={tableRowStyle}
@@ -1267,6 +1288,41 @@ const importBooksCsv = async (event) => {
               )}
             </tbody>
           </table>
+        </div>
+
+        <div style={paginationStyle}>
+          <span style={paginationTextStyle}>
+            Page {page} of {totalPages} · Showing{" "}
+            {books.length} of {totalBooks} book(s)
+          </span>
+
+          <div style={paginationButtonsStyle}>
+            <button
+              type="button"
+              disabled={page <= 1 || loading}
+              onClick={() =>
+                setPage((current) => current - 1)
+              }
+              style={paginationButtonStyle(
+                page <= 1 || loading
+              )}
+            >
+              Previous
+            </button>
+
+            <button
+              type="button"
+              disabled={page >= totalPages || loading}
+              onClick={() =>
+                setPage((current) => current + 1)
+              }
+              style={paginationButtonStyle(
+                page >= totalPages || loading
+              )}
+            >
+              Next
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -1554,6 +1610,38 @@ const searchInputStyle = {
 const tableContainerStyle = {
   overflowX: "auto",
 };
+
+const paginationStyle = {
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  gap: "12px",
+  flexWrap: "wrap",
+  marginTop: "16px",
+};
+
+const paginationTextStyle = {
+  color: "#64748b",
+  fontSize: "12px",
+  fontWeight: "600",
+};
+
+const paginationButtonsStyle = {
+  display: "flex",
+  gap: "8px",
+};
+
+const paginationButtonStyle = (disabled) => ({
+  padding: "8px 13px",
+  backgroundColor: disabled ? "#f1f5f9" : "#2563eb",
+  color: disabled ? "#94a3b8" : "#ffffff",
+  border: "1px solid",
+  borderColor: disabled ? "#e2e8f0" : "#2563eb",
+  borderRadius: "7px",
+  cursor: disabled ? "not-allowed" : "pointer",
+  fontSize: "12px",
+  fontWeight: "600",
+});
 
 const tableStyle = {
   width: "100%",

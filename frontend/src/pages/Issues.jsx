@@ -13,11 +13,14 @@ function Issues() {
   const [activeIssues, setActiveIssues] = useState([]);
 
   const [memberSearch, setMemberSearch] = useState("");
+  const [bookSearch, setBookSearch] = useState("");
   const [selectedUserId, setSelectedUserId] = useState("");
   const [selectedBookId, setSelectedBookId] = useState("");
   
   const [loading, setLoading] = useState(true);
   const [searchingMembers, setSearchingMembers] = useState(false);
+  const [searchingBooks, setSearchingBooks] = useState(false);
+  const [availableBookTotal, setAvailableBookTotal] = useState(0);
   const [issuing, setIssuing] = useState(false);
 
   const [exporting, setExporting] =
@@ -82,7 +85,11 @@ function Issues() {
   // FETCH BOOKS
   // ==================================================
 
-  const fetchBooks = async () => {
+  const fetchBooks = async (
+    searchValue = bookSearch
+  ) => {
+    setSearchingBooks(true);
+
     try {
       if (!getToken()) {
         navigate("/");
@@ -92,6 +99,14 @@ function Issues() {
       const response = await axios.get(
         `${API_BASE_URL}/books/`,
         {
+          params: {
+            skip: 0,
+            limit: 100,
+            sort_by: "title",
+            available_only: true,
+            search:
+              searchValue.trim() || undefined,
+          },
           headers: getHeaders(),
         }
       );
@@ -115,6 +130,9 @@ function Issues() {
       }
 
       setBooks(bookData);
+      setAvailableBookTotal(
+        Number(response.data?.total ?? bookData.length)
+      );
     } catch (error) {
       console.error("Books Error:", error);
 
@@ -126,6 +144,8 @@ function Issues() {
         error.response?.data?.detail ||
           "Unable to load books."
       );
+    } finally {
+      setSearchingBooks(false);
     }
   };
 
@@ -197,10 +217,7 @@ function Issues() {
       setError("");
 
       try {
-        await Promise.all([
-          fetchBooks(),
-          fetchActiveIssues(),
-        ]);
+        await fetchActiveIssues();
       } finally {
         setLoading(false);
       }
@@ -210,6 +227,20 @@ function Issues() {
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // ==================================================
+  // SEARCH AVAILABLE BOOKS
+  // ==================================================
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      fetchBooks(bookSearch);
+    }, 300);
+
+    return () => window.clearTimeout(timer);
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bookSearch]);
 
   // ==================================================
   // SEARCH MEMBERS
@@ -394,10 +425,11 @@ const exportIssuesCsv = async () => {
       setSelectedUserId("");
       setSelectedBookId("");
       setMemberSearch("");
+      setBookSearch("");
       setMembers([]);
 
       await Promise.all([
-        fetchBooks(),
+        fetchBooks(""),
         fetchActiveIssues(),
       ]);
     } catch (error) {
@@ -508,7 +540,7 @@ const exportIssuesCsv = async () => {
       }
 
       await Promise.all([
-        fetchBooks(),
+        fetchBooks(bookSearch),
         fetchActiveIssues(),
       ]);
     } catch (error) {
@@ -670,7 +702,7 @@ const exportIssuesCsv = async () => {
 
         <SummaryCard
           title="Available Books"
-          value={availableBooks.length}
+          value={availableBookTotal}
           icon="📚"
           background="#dcfce7"
         />
@@ -798,6 +830,27 @@ const exportIssuesCsv = async () => {
 
               <div>
                 <label style={labelStyle}>
+                  Find Available Book
+                </label>
+
+                <div style={bookSearchBoxStyle}>
+                  <span style={searchIconStyle}>
+                    ⌕
+                  </span>
+
+                  <input
+                    type="text"
+                    placeholder="Search by title or ISBN..."
+                    value={bookSearch}
+                    onChange={(e) => {
+                      setBookSearch(e.target.value);
+                      setSelectedBookId("");
+                    }}
+                    style={searchInputStyle}
+                  />
+                </div>
+
+                <label style={bookSelectLabelStyle}>
                   Available Book
                 </label>
 
@@ -812,7 +865,9 @@ const exportIssuesCsv = async () => {
                   style={inputStyle}
                 >
                   <option value="">
-                    Select Book
+                    {searchingBooks
+                      ? "Searching books..."
+                      : "Select Book"}
                   </option>
 
                   {availableBooks.map(
@@ -822,6 +877,7 @@ const exportIssuesCsv = async () => {
                         value={book.id}
                       >
                         {book.title} -{" "}
+                        {book.isbn || "No ISBN"} -{" "}
                         {
                           book.available_copies
                         }{" "}
@@ -830,6 +886,15 @@ const exportIssuesCsv = async () => {
                     )
                   )}
                 </select>
+
+                <p style={helperTextStyle}>
+                  {searchingBooks
+                    ? "Searching the complete catalogue..."
+                    : `${availableBookTotal} matching available book(s).`}
+                  {availableBookTotal > 100
+                    ? " Refine the search to find books beyond the first 100 results."
+                    : ""}
+                </p>
               </div>
             </div>
 
@@ -1216,6 +1281,19 @@ const searchBoxStyle = {
   border: "1px solid #d1d5db",
   borderRadius: "8px",
   padding: "0 10px",
+};
+
+const bookSearchBoxStyle = {
+  ...searchBoxStyle,
+  marginBottom: "8px",
+};
+
+const bookSelectLabelStyle = {
+  display: "block",
+  marginBottom: "6px",
+  color: "#64748b",
+  fontSize: "11px",
+  fontWeight: "600",
 };
 
 const searchIconStyle = {
