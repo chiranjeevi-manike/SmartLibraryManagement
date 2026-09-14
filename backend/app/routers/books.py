@@ -64,6 +64,7 @@ async def import_books_from_csv(
         require_roles("ADMIN", "LIBRARIAN")
     ),
 ):
+    """Import books using either relationship IDs or human-readable names."""
     if (
         not file.filename
         or not file.filename.lower().endswith(".csv")
@@ -83,108 +84,71 @@ async def import_books_from_csv(
 
     try:
         decoded_content = content.decode("utf-8-sig")
-    except UnicodeDecodeError:
+    except UnicodeDecodeError as error:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="CSV file must use UTF-8 encoding",
-        )
+        ) from error
 
-    reader = csv.DictReader(
-        io.StringIO(decoded_content)
-    )
+    reader = csv.DictReader(io.StringIO(decoded_content))
+    received_columns = set(reader.fieldnames or [])
+    base_columns = {"isbn", "title", "total_copies"}
+    id_columns = {"author_id", "category_id"}
+    name_columns = {"author_name", "category_name"}
+    uses_id_columns = id_columns.issubset(received_columns)
+    uses_name_columns = name_columns.issubset(received_columns)
+    missing_columns = base_columns - received_columns
 
-    required_columns = {
-        "isbn",
-        "title",
-        "author_id",
-        "category_id",
-        "total_copies",
-    }
-
-    received_columns = set(
-        reader.fieldnames or []
-    )
-
-    missing_columns = (
-        required_columns - received_columns
-    )
+    if not uses_id_columns and not uses_name_columns:
+        # Retain the original API contract unless the upload clearly
+        # attempts to use the new name-based format.
+        if received_columns & name_columns:
+            missing_columns.update(
+                name_columns - received_columns
+            )
+        else:
+            missing_columns.update(
+                id_columns - received_columns
+            )
 
     if missing_columns:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=(
                 "Missing required columns: "
-                + ", ".join(
-                    sorted(missing_columns)
-                )
+                + ", ".join(sorted(missing_columns))
             ),
         )
 
-    author_ids = {
-        author_id
-        for (author_id,) in db.query(
-            Author.id
-        ).all()
-    }
-
-    category_ids = {
-        category_id
-        for (category_id,) in db.query(
-            Category.id
-        ).all()
-    }
+    # Prefer the new, user-friendly format when both formats are present.
+    import_by_name = uses_name_columns
 
     existing_isbns = {
-        isbn.strip().lower()
-        for (isbn,) in db.query(
-            Book.isbn
-        ).all()
+        isbn.strip().casefold()
+        for (isbn,) in db.query(Book.isbn).all()
         if isbn
     }
-
+    author_ids = {
+        author_id
+        for (author_id,) in db.query(Author.id).all()
+    }
+    category_ids = {
+        category_id
+        for (category_id,) in db.query(Category.id).all()
+    }
     seen_isbns = set()
     valid_books = []
     errors = []
 
-    for row_number, row in enumerate(
-        reader,
-        start=2,
-    ):
-        isbn = (
-            row.get("isbn") or ""
-        ).strip()
-
-        title = (
-            row.get("title") or ""
-        ).strip()
-
+    for row_number, row in enumerate(reader, start=2):
+        isbn = (row.get("isbn") or "").strip()
+        title = (row.get("title") or "").strip()
         row_errors = []
-
-        try:
-            author_id = int(
-                row.get("author_id") or ""
-            )
-        except ValueError:
-            author_id = None
-            row_errors.append(
-                "author_id must be an integer"
-            )
-
-        try:
-            category_id = int(
-                row.get("category_id") or ""
-            )
-        except ValueError:
-            category_id = None
-            row_errors.append(
-                "category_id must be an integer"
-            )
 
         try:
             total_copies = int(
                 row.get("total_copies") or ""
             )
-
             if total_copies <= 0:
                 row_errors.append(
                     "total_copies must be greater than 0"
@@ -195,41 +159,87 @@ async def import_books_from_csv(
                 "total_copies must be an integer"
             )
 
-        normalized_isbn = isbn.lower()
-
+        normalized_isbn = isbn.casefold()
         if not isbn:
-            row_errors.append(
-                "ISBN is required"
-            )
+            row_errors.append("ISBN is required")
         elif normalized_isbn in existing_isbns:
-            row_errors.append(
-                "ISBN already exists"
-            )
+            row_errors.append("ISBN already exists")
         elif normalized_isbn in seen_isbns:
-            row_errors.append(
-                "Duplicate ISBN in CSV file"
-            )
+            row_errors.append("Duplicate ISBN in CSV file")
 
         if not title:
+            row_errors.append("Title is required")
+        elif len(title) > 200:
             row_errors.append(
-                "Title is required"
+                "Title must not exceed 200 characters"
             )
 
-        if (
-            author_id is not None
-            and author_id not in author_ids
-        ):
-            row_errors.append(
-                "Author not found"
-            )
+        book_data = {
+            "isbn": isbn,
+            "title": title,
+            "total_copies": total_copies,
+        }
 
-        if (
-            category_id is not None
-            and category_id not in category_ids
-        ):
-            row_errors.append(
-                "Category not found"
-            )
+        if import_by_name:
+            author_name = (
+                row.get("author_name") or ""
+            ).strip()
+            category_name = (
+                row.get("category_name") or ""
+            ).strip()
+
+            if not author_name:
+                row_errors.append("Author name is required")
+            elif len(author_name) > 150:
+                row_errors.append(
+                    "Author name must not exceed 150 characters"
+                )
+
+            if not category_name:
+                row_errors.append("Category name is required")
+            elif len(category_name) > 100:
+                row_errors.append(
+                    "Category name must not exceed 100 characters"
+                )
+
+            book_data.update({
+                "author_name": author_name,
+                "category_name": category_name,
+            })
+        else:
+            try:
+                author_id = int(row.get("author_id") or "")
+            except ValueError:
+                author_id = None
+                row_errors.append(
+                    "author_id must be an integer"
+                )
+
+            try:
+                category_id = int(
+                    row.get("category_id") or ""
+                )
+            except ValueError:
+                category_id = None
+                row_errors.append(
+                    "category_id must be an integer"
+                )
+
+            if (
+                author_id is not None
+                and author_id not in author_ids
+            ):
+                row_errors.append("Author not found")
+            if (
+                category_id is not None
+                and category_id not in category_ids
+            ):
+                row_errors.append("Category not found")
+
+            book_data.update({
+                "author_id": author_id,
+                "category_id": category_id,
+            })
 
         if row_errors:
             errors.append({
@@ -240,28 +250,67 @@ async def import_books_from_csv(
             continue
 
         seen_isbns.add(normalized_isbn)
+        valid_books.append(book_data)
 
-        valid_books.append({
-            "isbn": isbn,
-            "title": title,
-            "author_id": author_id,
-            "category_id": category_id,
-            "total_copies": total_copies,
-        })
-
+    authors_by_name = {
+        author.name.strip().casefold(): author
+        for author in db.query(Author).all()
+    }
+    categories_by_name = {
+        category.name.strip().casefold(): category
+        for category in db.query(Category).all()
+    }
     imported_books = []
+    authors_created = 0
+    categories_created = 0
 
     try:
         for book_data in valid_books:
-            book_create = BookCreate(
-                **book_data
-            )
+            if import_by_name:
+                author_key = book_data[
+                    "author_name"
+                ].casefold()
+                author = authors_by_name.get(author_key)
 
-            new_book = (
-                book_repository.create_book(
-                    db,
-                    book_create,
-                )
+                if author is None:
+                    author = Author(
+                        name=book_data["author_name"]
+                    )
+                    db.add(author)
+                    db.flush()
+                    authors_by_name[author_key] = author
+                    authors_created += 1
+
+                category_key = book_data[
+                    "category_name"
+                ].casefold()
+                category = categories_by_name.get(category_key)
+
+                if category is None:
+                    category = Category(
+                        name=book_data["category_name"]
+                    )
+                    db.add(category)
+                    db.flush()
+                    categories_by_name[category_key] = category
+                    categories_created += 1
+
+                author_id = author.id
+                category_id = category.id
+            else:
+                author_id = book_data["author_id"]
+                category_id = book_data["category_id"]
+
+            book_create = BookCreate(
+                isbn=book_data["isbn"],
+                title=book_data["title"],
+                author_id=author_id,
+                category_id=category_id,
+                total_copies=book_data["total_copies"],
+            )
+            new_book = book_repository.create_book(
+                db,
+                book_create,
             )
 
             for copy_number in range(
@@ -290,7 +339,6 @@ async def import_books_from_csv(
                     f"{new_book.title}"
                 ),
             )
-
             imported_books.append({
                 "id": new_book.id,
                 "isbn": new_book.isbn,
@@ -299,19 +347,30 @@ async def import_books_from_csv(
 
         db.commit()
 
-    except Exception:
+    except IntegrityError as error:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Import conflicts with existing data",
+        ) from error
+    except Exception as error:
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Unable to import books",
-        )
+        ) from error
 
     return {
+        "total_rows": len(valid_books) + len(errors),
         "imported_count": len(imported_books),
         "failed_count": len(errors),
+        "authors_created": authors_created,
+        "categories_created": categories_created,
         "imported_books": imported_books,
         "errors": errors,
     }
+
+
 
 @router.post(
     "/",
